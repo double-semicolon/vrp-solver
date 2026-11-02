@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+results/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
