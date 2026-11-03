@@ -22,6 +22,7 @@ from itertools import combinations
 from ..model import Instance, Route, Solution
 from ..objective import is_feasible, solution_cost
 from ..result import Improvement, SolveResult
+from .nearest_neighbor import nearest_neighbor
 
 
 class BranchAndBound:
@@ -160,7 +161,12 @@ class BranchAndBound:
 
 # ---------------------------------------------------------------- 入口
 
-def solve_branch_and_bound(inst: Instance, incumbent: Solution | None = None) -> SolveResult:
+def solve_branch_and_bound(
+    inst: Instance,
+    incumbent: Solution | None = None,
+    *,
+    seed_with_nn: bool = False,
+) -> SolveResult:
     """
     枝刈り付き全探索で最適解を求める。
 
@@ -168,9 +174,22 @@ def solve_branch_and_bound(inst: Instance, incumbent: Solution | None = None) ->
     実行不可能な解のコストは上界として使えない (制約を破って安くなった値で刈ると
     真の最適解を落とす) ので、渡された解が実行不可能なら ValueError にする。
     黙って捨てると、呼び出し側は上界が効いていると思い込んだまま遅い探索をする。
+
+    seed_with_nn=True なら最近傍法の解を incumbent に使う。最近傍法は K 台を
+    超えうるので、こちらは実行不可能なら黙って上界なしに戻す (使えたかどうかは
+    stats["nn_seed"] に残す)。呼び出し側が渡した解と違い、使えないことがあるのは
+    最近傍法の性質で、呼び出し側の誤りではないため。
     """
+    if incumbent is not None and seed_with_nn:
+        raise ValueError("incumbent と seed_with_nn は同時に指定できない")
     if incumbent is not None and not is_feasible(inst, incumbent):
         raise ValueError("incumbent が実行可能解ではない")
+
+    nn_seed = False
+    if seed_with_nn:
+        nn = nearest_neighbor(inst)
+        if is_feasible(inst, nn):
+            incumbent, nn_seed = nn, True
 
     bnb = BranchAndBound(inst, incumbent)
     initial_upper_bound = bnb.best_cost
@@ -180,4 +199,9 @@ def solve_branch_and_bound(inst: Instance, incumbent: Solution | None = None) ->
     stats["initial_upper_bound"] = (
         None if math.isinf(initial_upper_bound) else int(initial_upper_bound)
     )
-    return SolveResult.build(inst, "bnb", best, elapsed, stats, bnb.history)
+    if seed_with_nn:
+        stats["nn_seed"] = nn_seed
+    # 名前は頼まれた設定で決める。初期解が使えたかで名前が変わると、
+    # 比較表で同じ設定の行がインスタンスごとに別の名前になる。
+    name = "bnb+nn" if seed_with_nn else "bnb"
+    return SolveResult.build(inst, name, best, elapsed, stats, bnb.history)

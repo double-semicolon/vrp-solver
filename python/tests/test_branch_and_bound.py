@@ -13,10 +13,11 @@ from conftest import REFERENCE_IDS, REFERENCES, Reference, canonical
 
 from vrp.instances import TOY5, TOY8
 from vrp.model import Instance
-from vrp.objective import solution_cost
+from vrp.objective import is_feasible, solution_cost
 from vrp.solvers import (
     BranchAndBound,
     enumerate_solutions,
+    nearest_neighbor,
     solve_branch_and_bound,
     solve_brute_force,
 )
@@ -166,3 +167,53 @@ def test_infeasible_instance_is_reported_not_silently_wrong():
 
     with pytest.raises(ValueError, match="実行可能解が存在しない"):
         solve_branch_and_bound(impossible)
+
+
+# ---------------------------------------------------------------- 最近傍法の初期解
+
+
+@pytest.mark.parametrize("inst", INSTANCES, ids=IDS)
+def test_nn_seed_reaches_the_same_optimum_with_no_larger_search(inst: Instance):
+    without = solve_branch_and_bound(inst)
+    seeded = solve_branch_and_bound(inst, seed_with_nn=True)
+
+    assert seeded.solver == "bnb+nn"
+    assert seeded.cost == without.cost
+    assert seeded.stats["nodes"] <= without.stats["nodes"]
+    if seeded.stats["nn_seed"]:
+        assert seeded.stats["initial_upper_bound"] == solution_cost(inst, nearest_neighbor(inst))
+
+
+def test_nn_seed_shrinks_the_search_on_toy8():
+    """初期上界 318 (最適 303) で探索ノードがほぼ半減する。配線が効いていることの確認。"""
+    without = solve_branch_and_bound(TOY8)
+    seeded = solve_branch_and_bound(TOY8, seed_with_nn=True)
+    assert seeded.stats["nn_seed"]
+    assert seeded.stats["nodes"] < without.stats["nodes"] * 0.7
+
+
+def test_infeasible_nn_is_not_used_as_upper_bound():
+    """
+    最近傍法が K 台を超えたら、そのコストで刈ってはいけない。
+
+    近い 1, 2 を1台に積むと 3, 4 が乗らず3台になるが、K=2 の最適解は存在する。
+    """
+    inst = Instance(name="nn-over", coords=[(0, 0), (1, 0), (2, 0), (0, 10), (0, -10)],
+                    demands=[0, 3, 3, 7, 7], capacity=10, num_vehicles=2)
+    assert not is_feasible(inst, nearest_neighbor(inst))
+
+    res = solve_branch_and_bound(inst, seed_with_nn=True)
+    assert res.stats["nn_seed"] is False
+    assert res.stats["initial_upper_bound"] is None
+    assert res.cost == solve_brute_force(inst).cost
+    assert res.solver == "bnb+nn"
+
+
+def test_incumbent_and_nn_seed_are_exclusive():
+    first = next(enumerate_solutions(TOY5))
+    with pytest.raises(ValueError, match="同時"):
+        solve_branch_and_bound(TOY5, incumbent=first, seed_with_nn=True)
+
+
+def test_unseeded_run_does_not_report_nn_seed():
+    assert "nn_seed" not in solve_branch_and_bound(TOY5).stats
