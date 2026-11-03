@@ -15,7 +15,12 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
+    "pytest-timeout>=2.4.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# gain の式が壊れると「改善した」と判定し続けて 2-opt のループが終わらない。
+# 落ちるべきテストが止まったままにならないよう、1 テストごとに打ち切る。
+# 最も遅いテスト (toy8 の独立オラクル) が 8 秒ほどなので、余裕を見て 60 秒。
+timeout = 60
