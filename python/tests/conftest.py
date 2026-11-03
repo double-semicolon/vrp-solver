@@ -2,9 +2,30 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import combinations, permutations
 
+from vrp.instances import TOY5, TOY8
 from vrp.model import Instance, Solution
+
+
+@dataclass(frozen=True)
+class Reference:
+    """全探索 (参照実装) で求めた正解。以降の全てのソルバの検証に使う。"""
+
+    inst: Instance
+    optimal_cost: int
+    n_solutions: int   # 実行可能解の総数 (重複なし)
+    n_nodes: int       # 全探索の探索ノード数
+
+
+# 実装を変えてこの数値が動いたら、それは意図した変更か必ず確認すること。
+# 全探索を速くする変更は入れない約束なので、ここが動くこと自体が異常のサイン。
+REFERENCES = [
+    Reference(TOY5, optimal_cost=246, n_solutions=12, n_nodes=52),
+    Reference(TOY8, optimal_cost=303, n_solutions=15012, n_nodes=32951),
+]
+REFERENCE_IDS = [ref.inst.name for ref in REFERENCES]
 
 
 def canonical(sol: Solution) -> tuple[tuple[int, ...], ...]:
