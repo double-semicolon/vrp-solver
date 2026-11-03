@@ -15,7 +15,7 @@
 | | 内容 | 言語 | 状態 |
 |---|---|---|---|
 | Step 0 | 全探索で厳密解 (顧客5〜8件)、枝刈り (branch and bound) | Python | 完了 |
-| Step 1 | 構築法 (最近傍法) + 2-opt。顧客50件規模で改善幅を確認 | Python | |
+| Step 1 | 構築法 (最近傍法) + 2-opt。顧客50件規模で改善幅を確認 | Python | 完了 |
 | Step 2 | CVRPLib X set を読み込み、BKS (既知最良解) との gap で評価 | Python | |
 | Step 3 | Java へ移植。同じ入力に対する出力 JSON が Python 版と一致することを確認 | Java | |
 | Step 4 | 近傍拡張 (relocate / swap / Or-opt / 2-opt*)、近傍リスト、don't-look bits、ALNS | Java | |
@@ -23,6 +23,43 @@
 
 進捗とタスクは GitHub Project で管理する。各 Step を 1 つのマイルストーンとし、
 作業単位は issue に切る。
+
+## 結果
+
+### Step 1: 最近傍法 + ルート内 2-opt
+
+ランダムインスタンス (シード固定) で、各シードの最良を 0% としたときの差の平均。
+
+| 顧客数 | 配置 | シード | 最近傍法 | 最近傍法 + 2-opt | 最適 (B&B) |
+|---|---|---|---|---|---|
+| 50 | 一様 | 20 個 | +4.94% | 0% | - |
+| 50 | クラスタ | 20 個 | +4.20% | 0% | - |
+| 10 | 一様 | 10 個 | +29.04% | +22.64% | 0% |
+
+最適解が出せる 10 件で見ると、2-opt が埋めるのは最近傍法と最適の差の 2 割強にとどまる。
+2-opt はルートの中の順序しか変えないので、「どの顧客をどの車に割り当てるか」の
+悪さは残る。最近傍法は最後の車にほぼ空のルートを作りがちで、これはルート間の
+近傍 (Step 4 の relocate など) でしか直せない。
+
+再現するコマンド:
+
+```
+uv run vrp bench -n 50 --seeds 20 --solvers nn nn+2opt
+uv run vrp bench -n 50 --seeds 20 --solvers nn nn+2opt --layout clustered
+uv run vrp bench -n 10 --seeds 10 --solvers nn nn+2opt bnb
+```
+
+## 使い方
+
+`python/` で実行する。作図には matplotlib が要る (`uv sync --extra viz`。開発用の環境には入っている)。
+
+```
+uv run vrp demo                                      toy5/toy8 で全探索・枝刈り・構築法・2-opt を並べる
+uv run vrp compare --instance random -n 50 --plot    複数ソルバを比べ、ルート図と収束図を出す
+uv run vrp compare --instance toy8 --save            結果を results/ に JSON で保存する
+uv run vrp plot results/xxx.json                     保存した結果から作図し直す
+uv run pytest                                        テスト
+```
 
 ## 言語の役割分担
 
@@ -40,15 +77,18 @@ Java 版の正しさを「Python 版と同じ答えが出るか」で機械的�
 
 **参照実装を凍結する。** 全探索は速くしない。toy インスタンスでの最適値・解の総数・
 探索ノード数をテストに焼き、以降の高速化は全て「これと同じ答えに到達すること」で検証する。
+(`tests/conftest.py` の `REFERENCES`。branch and bound と 2-opt は toy で同じ最適値に届くことをテストしている)
 
 **コストは必ず目的関数モジュールで採点し直す。** ソルバが差分計算で積算した値は
 そのまま信用せず、結果を返す時点で計算し直して上書きする。差分計算のバグが結果として通らない。
+(`SolveResult.build`。2-opt では差分で積算した値と計算し直した値の一致もテストしている)
 
 **core は無依存に保つ。** 探索ロジックは標準ライブラリだけで書き、作図などの依存は
 optional に切り出す。Java に移植する対象を純粋な探索ロジックだけに限るための線引き。
+(matplotlib は `viz.py` でしか import しない。core が読み込まないことを別プロセスで確かめるテストがある)
 
 **JSON は厳格に保つ。** `inf` / `NaN` を書かない。Java 側の出力と diff できることが、
-Step 3 の検証手段になる。
+Step 3 の検証手段になる。(`serialize.py`。`null` への書き換えもせず、書き込みでも読み込みでも例外にする)
 
 ## 構成
 
