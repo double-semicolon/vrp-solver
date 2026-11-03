@@ -14,7 +14,7 @@
 
 | | 内容 | 言語 | 状態 |
 |---|---|---|---|
-| Step 0 | 全探索で厳密解 (顧客5〜8件)、枝刈り (branch and bound) | Python | |
+| Step 0 | 全探索で厳密解 (顧客5〜8件)、枝刈り (branch and bound) | Python | 完了 |
 | Step 1 | 構築法 (最近傍法) + 2-opt。顧客50件規模で改善幅を確認 | Python | |
 | Step 2 | CVRPLib X set を読み込み、BKS (既知最良解) との gap で評価 | Python | |
 | Step 3 | Java へ移植。同じ入力に対する出力 JSON が Python 版と一致することを確認 | Java | |
