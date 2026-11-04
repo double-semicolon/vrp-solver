@@ -1,7 +1,7 @@
 """
 CVRPLib ベンチマーク (benchmark.py, fetch.py, CLI の bench-x) のテスト。
 
-ネットワークには触らない。X set 全体の代わりに tests/data/cvrplib の 2 件を使い、
+ネットワークには触らない。X set 全体の代わりに testdata/cvrplib の 2 件を使い、
 取得は 7z の展開部分だけを、テストの中で作ったアーカイブで確かめる。
 """
 
@@ -12,6 +12,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+from conftest import TESTDATA
 
 from vrp.benchmark import (
     FORMAT,
@@ -25,7 +26,7 @@ from vrp.cli import main
 from vrp.instances.fetch import extract_7z
 from vrp.objective import solution_cost
 
-DATA = Path(__file__).parent / "data" / "cvrplib"
+DATA = TESTDATA / "cvrplib"
 BKS = {"X-n101-k25": 27591, "X-n106-k14": 26362}   # CVRPLib の一覧表の値
 
 

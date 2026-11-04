@@ -11,13 +11,14 @@ import math
 from pathlib import Path
 
 import pytest
+from conftest import TESTDATA
 
 from vrp.instances import load_sol, load_vrp
 from vrp.instances.cvrplib import parse_sol, parse_vrp
 from vrp.model import Instance
 from vrp.objective import solution_cost, validate
 
-DATA = Path(__file__).parent / "data" / "cvrplib"
+DATA = TESTDATA / "cvrplib"
 
 # (ファイル名, 顧客数, 容量, 総需要, 名前の k)
 X_INSTANCES = [

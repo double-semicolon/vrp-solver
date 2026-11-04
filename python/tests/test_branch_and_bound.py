@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import pytest
-from conftest import REFERENCE_IDS, REFERENCES, Reference, canonical
+from conftest import CASES, NN_OVER, REFERENCE_IDS, REFERENCES, Reference, canonical
 
 from vrp.instances import TOY5, TOY8
 from vrp.model import Instance
@@ -23,30 +23,10 @@ from vrp.solvers import (
 )
 
 
-def _variant(inst: Instance, name: str, **overrides) -> Instance:
-    kwargs = dict(
-        name=name,
-        coords=inst.coords,
-        demands=inst.demands,
-        capacity=inst.capacity,
-        num_vehicles=inst.num_vehicles,
-    )
-    kwargs.update(overrides)
-    return Instance(**kwargs)
-
-
-# 車両数や容量を変えた派生インスタンス。枝刈りの正しさが
-# 元の2インスタンスにたまたま合っているだけ、という事故を防ぐ。
-INSTANCES = [
-    TOY5,
-    TOY8,
-    _variant(TOY5, "toy5-K3", num_vehicles=3),
-    _variant(TOY5, "toy5-tight", capacity=27),   # 総需要 53 / 2台 = ぎりぎり収まる
-    _variant(TOY8, "toy8-K4", num_vehicles=4),
-    _variant(TOY8, "toy8-tight", capacity=30),
-    _variant(TOY5, "toy5-unlimited", num_vehicles=None),
-    _variant(TOY8, "toy8-unlimited", num_vehicles=None),
-]
+# 共通テストデータのうち実行可能解があるもの全部。toy に加えて車両数や容量を
+# 変えた派生を含め、枝刈りの正しさが元の2インスタンスにたまたま合っているだけ、
+# という事故を防ぐ (各ケースの意図は testdata/cases/*.json の description)。
+INSTANCES = [c.inst for c in CASES.values() if c.optimal_cost is not None]
 IDS = [i.name for i in INSTANCES]
 
 
@@ -115,7 +95,12 @@ def test_finds_the_same_optimum_as_brute_force(inst: Instance):
     assert solution_cost(inst, res.solution) == res.cost
 
 
-@pytest.mark.parametrize("inst", INSTANCES, ids=IDS)
+# nn-over (顧客 4 件、実行可能解が数個) のような極小ケースには刈る余地が無いので除く。
+# 等号を許して全ケースに掛けると、toy 系で枝刈りが効かなくなっても通ってしまう。
+PRUNABLE = [i for i in INSTANCES if i.n >= 5]
+
+
+@pytest.mark.parametrize("inst", PRUNABLE, ids=[i.name for i in PRUNABLE])
 def test_pruning_reduces_the_search(inst: Instance):
     ref = solve_brute_force(inst)
     res = solve_branch_and_bound(inst)
@@ -164,7 +149,7 @@ def test_infeasible_instance_is_reported_not_silently_wrong():
 
     空の解や不正な解を黙って返さないことを確認しておく。
     """
-    impossible = _variant(TOY5, "toy5-impossible", capacity=22)   # 22 x 2 = 44 < 53
+    impossible = CASES["toy5-impossible"].inst   # 22 x 2 = 44 < 53
     assert impossible.capacity * impossible.num_vehicles < sum(impossible.demands)
 
     with pytest.raises(ValueError, match="実行可能解が存在しない"):
@@ -200,8 +185,7 @@ def test_infeasible_nn_is_not_used_as_upper_bound():
 
     近い 1, 2 を1台に積むと 3, 4 が乗らず3台になるが、K=2 の最適解は存在する。
     """
-    inst = Instance(name="nn-over", coords=[(0, 0), (1, 0), (2, 0), (0, 10), (0, -10)],
-                    demands=[0, 3, 3, 7, 7], capacity=10, num_vehicles=2)
+    inst = NN_OVER
     assert not is_feasible(inst, nearest_neighbor(inst))
 
     res = solve_branch_and_bound(inst, seed_with_nn=True)
@@ -225,9 +209,7 @@ def test_nn_is_always_usable_when_vehicles_are_unlimited():
     """
     上の nn-over と同じ配置で上限を外すと、最近傍法の3台の解が実行可能になり上界に使える。
     """
-    inst = Instance(name="nn-over-unlimited",
-                    coords=[(0, 0), (1, 0), (2, 0), (0, 10), (0, -10)],
-                    demands=[0, 3, 3, 7, 7], capacity=10, num_vehicles=None)
+    inst = CASES["nn-over-unlimited"].inst
     nn = nearest_neighbor(inst)
     assert len(nn) == 3 and is_feasible(inst, nn)
 

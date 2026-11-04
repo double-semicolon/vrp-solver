@@ -10,7 +10,7 @@ from __future__ import annotations
 import random
 
 import pytest
-from conftest import REFERENCE_IDS, REFERENCES, Reference
+from conftest import NN_OVER, RANDOM_50, REFERENCE_IDS, REFERENCES, Reference
 
 from vrp.instances import TOY5, TOY8, random_instance
 from vrp.model import Instance
@@ -18,8 +18,7 @@ from vrp.objective import route_cost, solution_cost, validate
 from vrp.solvers import nearest_neighbor, solve_nn_2opt, two_opt
 from vrp.solvers.two_opt import gain
 
-RANDOM = [random_instance(50, seed=s, layout=lay) for s in range(5) for lay in ("uniform", "clustered")]
-INSTANCES = [TOY5, TOY8, *RANDOM]
+INSTANCES = [TOY5, TOY8, *RANDOM_50]
 IDS = [i.name for i in INSTANCES]
 
 
@@ -99,7 +98,7 @@ def test_reaches_the_optimum_on_toys(ref: Reference):
 
 def test_improves_on_50_customer_instances():
     """顧客 50 件規模で、実際に改善していること (Step 1 の目的)。"""
-    for inst in RANDOM:
+    for inst in RANDOM_50:
         assert solve_nn_2opt(inst).cost < solution_cost(inst, nearest_neighbor(inst)), inst.name
 
 
@@ -116,8 +115,6 @@ def test_does_not_fix_a_vehicle_limit_violation():
 
     近い 1, 2 を1台に積むと 3, 4 が乗らず3台になる (K=2)。
     """
-    inst = Instance(name="nn-over", coords=[(0, 0), (1, 0), (2, 0), (0, 10), (0, -10)],
-                    demands=[0, 3, 3, 7, 7], capacity=10, num_vehicles=2)
-    res = solve_nn_2opt(inst)
+    res = solve_nn_2opt(NN_OVER)
     assert len(res.solution) == 3
     assert not res.feasible

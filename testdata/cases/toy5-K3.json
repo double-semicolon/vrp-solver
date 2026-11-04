@@ -1,0 +1,48 @@
+{
+  "format": "vrp-case/1",
+  "description": "toy5 の台数を 3 に増やした派生。枝刈りが元の toy にだけ合っている事故を防ぐ。",
+  "instance": {
+    "name": "toy5-K3",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 30,
+    "num_vehicles": 3
+  },
+  "expected": {
+    "optimal_cost": 246,
+    "n_solutions": 39,
+    "n_nodes": 89
+  }
+}

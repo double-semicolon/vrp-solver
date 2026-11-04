@@ -1,0 +1,48 @@
+{
+  "format": "vrp-case/1",
+  "description": "toy5 の台数を上限なし (null) にした派生。",
+  "instance": {
+    "name": "toy5-unlimited",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 30,
+    "num_vehicles": null
+  },
+  "expected": {
+    "optimal_cost": 246,
+    "n_solutions": 50,
+    "n_nodes": 101
+  }
+}

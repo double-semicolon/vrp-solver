@@ -1,0 +1,43 @@
+{
+  "format": "vrp-case/1",
+  "description": "nn-over の台数を上限なしにした派生。最近傍法の 3 台の解がそのまま実行可能になる。",
+  "instance": {
+    "name": "nn-over-unlimited",
+    "coords": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        -10
+      ]
+    ],
+    "demands": [
+      0,
+      3,
+      3,
+      7,
+      7
+    ],
+    "capacity": 10,
+    "num_vehicles": null
+  },
+  "expected": {
+    "optimal_cost": 43,
+    "n_solutions": 8,
+    "n_nodes": 20
+  }
+}

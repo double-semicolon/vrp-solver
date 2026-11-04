@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import combinations, permutations
+from pathlib import Path
 
-from vrp.instances import TOY5, TOY8
+from vrp.instances import random_instance
 from vrp.model import Instance, Solution
+from vrp.serialize import instance_from_dict, loads
+
+# 言語共通のテストデータ (リポジトリ直下)。Java 版のテストも同じファイルを読む。
+TESTDATA = Path(__file__).resolve().parents[2] / "testdata"
+CASE_FORMAT = "vrp-case/1"
 
 
 @dataclass(frozen=True)
@@ -14,18 +20,41 @@ class Reference:
     """全探索 (参照実装) で求めた正解。以降の全てのソルバの検証に使う。"""
 
     inst: Instance
-    optimal_cost: int
-    n_solutions: int   # 実行可能解の総数 (重複なし)
-    n_nodes: int       # 全探索の探索ノード数
+    optimal_cost: int | None   # None は実行可能解が存在しない
+    n_solutions: int           # 実行可能解の総数 (重複なし)
+    n_nodes: int               # 全探索の探索ノード数
+    description: str = ""
 
 
+def load_case(path: Path) -> Reference:
+    d = loads(path.read_text(encoding="utf-8"))
+    if d.get("format") != CASE_FORMAT:
+        raise ValueError(f"{path.name}: 未知の形式 {d.get('format')!r}")
+    inst = instance_from_dict(d["instance"])
+    if inst.name != path.stem:
+        raise ValueError(f"{path.name}: ファイル名とインスタンス名 {inst.name!r} が違う")
+    e = d["expected"]
+    return Reference(inst, e["optimal_cost"], e["n_solutions"], e["n_nodes"], d["description"])
+
+
+# testdata/cases/*.json の全ケース。期待値は全探索で求めたもので、
 # 実装を変えてこの数値が動いたら、それは意図した変更か必ず確認すること。
 # 全探索を速くする変更は入れない約束なので、ここが動くこと自体が異常のサイン。
-REFERENCES = [
-    Reference(TOY5, optimal_cost=246, n_solutions=12, n_nodes=52),
-    Reference(TOY8, optimal_cost=303, n_solutions=15012, n_nodes=32951),
-]
+CASES: dict[str, Reference] = {
+    p.stem: load_case(p) for p in sorted((TESTDATA / "cases").glob("*.json"))
+}
+
+# 手書きの toy 2 件。全てのソルバが最適値に届くかを確かめる基準。
+REFERENCES = [CASES["toy5"], CASES["toy8"]]
 REFERENCE_IDS = [ref.inst.name for ref in REFERENCES]
+
+# 最近傍法が台数を超える例 (説明は testdata/cases/nn-over.json)
+NN_OVER = CASES["nn-over"].inst
+
+# 構築法・局所探索のテストで使う顧客 50 件のランダムインスタンス一式。
+# 生成器が Python 専用なので JSON にはしない (Java 用は #20 で保存したものを使う)。
+RANDOM_50 = [random_instance(50, seed=s, layout=lay)
+             for s in range(5) for lay in ("uniform", "clustered")]
 
 
 def canonical(sol: Solution) -> tuple[tuple[int, ...], ...]:

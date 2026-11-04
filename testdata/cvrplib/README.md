@@ -1,6 +1,6 @@
 # テスト用の CVRPLib インスタンス
 
-ローダ (`vrp.instances.load_vrp` / `load_sol`) のテストに使う小さいインスタンスと、その既知最良解だけを置く。
+ローダ (Python の `vrp.instances.load_vrp` / `load_sol` と、その Java 版) のテストに使う小さいインスタンスと、その既知最良解だけを置く。
 X set 全体はリポジトリに含めず、ベンチマーク時にダウンロードする。
 
 - 出典: CVRPLib (https://galgos.inf.puc-rio.br/cvrplib/)

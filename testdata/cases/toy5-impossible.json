@@ -1,0 +1,48 @@
+{
+  "format": "vrp-case/1",
+  "description": "容量 22 x 2 台 = 44 < 総需要 53 で、実行可能解が存在しない。ソルバは空の解を返さずエラーにすること。",
+  "instance": {
+    "name": "toy5-impossible",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 22,
+    "num_vehicles": 2
+  },
+  "expected": {
+    "optimal_cost": null,
+    "n_solutions": 0,
+    "n_nodes": 11
+  }
+}

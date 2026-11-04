@@ -8,15 +8,14 @@
 from __future__ import annotations
 
 import pytest
-from conftest import REFERENCE_IDS, REFERENCES, Reference
+from conftest import RANDOM_50, REFERENCE_IDS, REFERENCES, Reference
 
-from vrp.instances import TOY5, TOY8, random_instance
+from vrp.instances import TOY5, TOY8
 from vrp.model import Instance
 from vrp.objective import validate
 from vrp.solvers import nearest_neighbor, solve_nearest_neighbor
 
-RANDOM = [random_instance(50, seed=s, layout=lay) for s in range(5) for lay in ("uniform", "clustered")]
-INSTANCES = [TOY5, TOY8, *RANDOM]
+INSTANCES = [TOY5, TOY8, *RANDOM_50]
 IDS = [i.name for i in INSTANCES]
 
 

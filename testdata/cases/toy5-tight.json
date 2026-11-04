@@ -1,0 +1,48 @@
+{
+  "format": "vrp-case/1",
+  "description": "toy5 の容量を絞った派生。総需要 53 に対し 27 x 2 台でぎりぎり収まる。",
+  "instance": {
+    "name": "toy5-tight",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 27,
+    "num_vehicles": 2
+  },
+  "expected": {
+    "optimal_cost": 284,
+    "n_solutions": 3,
+    "n_nodes": 28
+  }
+}

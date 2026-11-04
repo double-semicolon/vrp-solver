@@ -1,0 +1,43 @@
+{
+  "format": "vrp-case/1",
+  "description": "最近傍法が台数を超える例。近い 1, 2 を1台に積むと 3, 4 が乗らず 3 台になるが、2 台の最適解は存在する。",
+  "instance": {
+    "name": "nn-over",
+    "coords": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        -10
+      ]
+    ],
+    "demands": [
+      0,
+      3,
+      3,
+      7,
+      7
+    ],
+    "capacity": 10,
+    "num_vehicles": 2
+  },
+  "expected": {
+    "optimal_cost": 43,
+    "n_solutions": 2,
+    "n_nodes": 13
+  }
+}

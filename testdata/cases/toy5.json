@@ -1,0 +1,48 @@
+{
+  "format": "vrp-case/1",
+  "description": "手書きの toy。容量も台数も効いている (1台では回れない)。全てのソルバの基準。",
+  "instance": {
+    "name": "toy5",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 30,
+    "num_vehicles": 2
+  },
+  "expected": {
+    "optimal_cost": 246,
+    "n_solutions": 12,
+    "n_nodes": 52
+  }
+}
