@@ -6,3 +6,4 @@ results/
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+/python/data/

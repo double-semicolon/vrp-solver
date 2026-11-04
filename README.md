@@ -49,6 +49,32 @@ uv run vrp bench -n 50 --seeds 20 --solvers nn nn+2opt --layout clustered
 uv run vrp bench -n 10 --seeds 10 --solvers nn nn+2opt bnb
 ```
 
+### Step 2: CVRPLib X set での BKS との gap
+
+X set 全 100 インスタンス (顧客 100〜1000 件) で、既知最良解 (BKS) からの差。
+BKS のコストは .sol の記載を信用せず、目的関数で採点し直して記載と一致することを確かめてから使う。
+
+| 顧客数 | インスタンス | 最近傍法 | 最近傍法 + 2-opt | 2-opt の改善 |
+|---|---|---|---|---|
+| 100〜250 | 33 | +28.64% | +24.97% | 3.68 ポイント |
+| 251〜500 | 35 | +25.34% | +21.77% | 3.57 ポイント |
+| 501〜1000 | 32 | +22.37% | +19.65% | 2.71 ポイント |
+| 全体 | 100 | +25.48% | +22.15% | 3.33 ポイント |
+
+gap の範囲は、最近傍法 + 2-opt で +1.5% (X-n376-k94) から +49.0% (X-n101-k25)。
+時間は両ソルバとも 1 インスタンス平均 0.04 秒 (n=1000 でも 0.2 秒)。
+
+ルート内 2-opt が詰めるのは 3 ポイント程度で、BKS との差の大半は残る。
+Step 1 の「割り当ての悪さはルート内の近傍では直らない」という見立てを、
+外部の基準でも確かめた形になる。Step 4 のルート間近傍は、この +22% をどこまで詰めるかで評価する。
+
+再現するコマンド (X set の取得に py7zr が要る。`uv sync --extra bench`。開発用の環境には入っている):
+
+```
+uv run vrp fetch-x                   python/data/cvrplib/X に 100 インスタンスと BKS を取得 (リポジトリには含めない)
+uv run vrp bench-x --save            全インスタンスで nn / nn+2opt の gap を測り、results/ に JSON で保存
+```
+
 ## 使い方
 
 `python/` で実行する。作図には matplotlib が要る (`uv sync --extra viz`。開発用の環境には入っている)。
@@ -58,6 +84,8 @@ uv run vrp demo                                      toy5/toy8 で全探索・�
 uv run vrp compare --instance random -n 50 --plot    複数ソルバを比べ、ルート図と収束図を出す
 uv run vrp compare --instance toy8 --save            結果を results/ に JSON で保存する
 uv run vrp plot results/xxx.json                     保存した結果から作図し直す
+uv run vrp fetch-x                                   CVRPLib の X set を取得する
+uv run vrp bench-x --max-n 300                       X set (顧客 300 件以下) で BKS との gap を測る
 uv run pytest                                        テスト
 ```
 

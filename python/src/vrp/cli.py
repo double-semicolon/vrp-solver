@@ -6,6 +6,8 @@
   vrp solve   --instance toy8 --solver bnb      1つ解く
   vrp compare --instance random -n 50 --plot    複数ソルバを比べて JSON と PNG を出す
   vrp bench   -n 50 --seeds 20                  多数のシードで改善幅の平均を取る
+  vrp fetch-x                                   CVRPLib の X set を data/cvrplib/X に取得する
+  vrp bench-x --max-n 300 --save                X set で BKS との gap を測る
   vrp plot    results/xxx.json                  保存済みの結果から作図し直す
 
 matplotlib は作図するときにだけ import する。入っていない環境でも
@@ -21,6 +23,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
+from .benchmark import load_cases, run_benchmark, save_bench, summarize
 from .instances import TOYS, random_instance
 from .model import Instance, Solution
 from .objective import route_cost, route_load, solution_cost, validate
@@ -29,6 +32,7 @@ from .serialize import load_run, save_run
 from .solvers import SOLVERS, solve_branch_and_bound, solve_brute_force
 
 TOY_BY_NAME = {i.name: i for i in TOYS}
+X_DIR = "data/cvrplib/X"   # fetch-x の置き場所。リポジトリには含めない
 
 
 # ---------------------------------------------------------------- 表示
@@ -224,6 +228,60 @@ def cmd_bench(args: argparse.Namespace) -> None:
         print("  " + "".join(_pad(c, w) for c, w in zip(row, widths)) + str(infeasible[name]))
 
 
+def cmd_fetch_x(args: argparse.Namespace) -> None:
+    from .instances.fetch import fetch_xset   # py7zr が要るのでここまで import を遅らせる
+
+    written = fetch_xset(args.dest)
+    n_vrp = sum(1 for p in written if p.suffix == ".vrp")
+    print(f"{args.dest} に {n_vrp} インスタンスと {len(written) - n_vrp} 個の BKS を置いた")
+
+
+def cmd_bench_x(args: argparse.Namespace) -> None:
+    """
+    X set の各インスタンスにソルバを掛け、BKS との gap と時間を出す。
+
+    gap の基準は BKS で、その場の最良ではない。ソルバ同士の比較ではなく、
+    「既知の最良からどれだけ離れているか」を測る。
+    """
+    cases = load_cases(args.dir, args.max_n)
+    if not cases:
+        raise SystemExit(f"顧客 {args.max_n} 件以下のインスタンスが {args.dir} に無い")
+    names = _pick_solvers(max(c.inst.n for c in cases), args.solvers, args.force)
+    print(f"{args.dir}: {len(cases)} インスタンス (顧客 {cases[0].inst.n}〜{cases[-1].inst.n} 件)")
+
+    widths = [16, 7, 9] + [20] * len(names)
+    header = ["インスタンス", "顧客", "BKS"] + [f"{n} gap / 秒" for n in names]
+    print("  " + "".join(_pad(h, w) for h, w in zip(header, widths)))
+
+    def show_row(row) -> None:
+        cells = [row.instance, str(row.n), str(row.bks)]
+        for res in row.results:
+            gap = f"{row.gap(res):+.2f}%" if res.feasible else "実行不可能"
+            cells.append(f"{gap} / {res.elapsed_sec:.2f}")
+        print("  " + "".join(_pad(c, w) for c, w in zip(cells, widths)), flush=True)
+
+    rows = run_benchmark(cases, names, on_row=show_row)
+
+    print(f"集計 ({len(rows)} インスタンス)")
+    widths = [12, 13, 13, 11, 11]
+    header = ["ソルバ", "gap 平均", "gap 最大", "時間 平均", "時間 合計", "実行不可能"]
+    print("  " + "".join(_pad(h, w) for h, w in zip(header, widths)) + header[-1])
+    for s in summarize(rows):
+        cells = [
+            s.solver,
+            "-" if s.mean_gap is None else f"{s.mean_gap:+.2f}%",
+            "-" if s.max_gap is None else f"{s.max_gap:+.2f}%",
+            f"{s.mean_sec:.2f} 秒",
+            f"{s.total_sec:.1f} 秒",
+        ]
+        print("  " + "".join(_pad(c, w) for c, w in zip(cells, widths)) + str(s.infeasible))
+
+    if args.save:
+        limit = "" if args.max_n is None else f"-n{args.max_n}"
+        path = Path(args.out_dir) / f"bench-x{limit}-{'_'.join(names)}.json"
+        print(f"  保存: {save_bench(path, rows)}")
+
+
 def cmd_plot(args: argparse.Namespace) -> None:
     """保存済みの結果から作図し直す。重い探索をやり直さずに図だけ差し替えられる。"""
     from . import viz
@@ -277,6 +335,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--seeds", type=int, default=20, help="シードの個数 (既定: 20)")
     add_random_args(sp)
 
+    sp = sub.add_parser("fetch-x", help="CVRPLib の X set を取得する (py7zr が要る)")
+    sp.add_argument("--dest", default=X_DIR, help=f"置き場所 (既定: {X_DIR})")
+
+    sp = sub.add_parser("bench-x", help="X set で BKS との gap を測る")
+    sp.add_argument("--dir", default=X_DIR, help=f".vrp と .sol の置き場所 (既定: {X_DIR})")
+    sp.add_argument("--max-n", type=int, help="この顧客数以下のインスタンスだけ使う")
+    sp.add_argument("--solvers", nargs="+", choices=list(SOLVERS), default=["nn", "nn+2opt"],
+                    help="既定: nn nn+2opt")
+    sp.add_argument("--force", action="store_true",
+                    help="大きすぎるインスタンスでも厳密解法を走らせる")
+    add_output_args(sp)
+
     sp = sub.add_parser("plot", help="保存済みの JSON から作図し直す")
     sp.add_argument("run", help="save_run が書いた JSON")
     sp.add_argument("--out", help="出力先 PNG (既定: 入力と同じ場所)")
@@ -294,7 +364,8 @@ def main(argv: list[str] | None = None) -> None:
 
     args = build_parser().parse_args(argv)
     handlers = {"demo": cmd_demo, "solve": cmd_solve, "compare": cmd_compare,
-                "bench": cmd_bench, "plot": cmd_plot}
+                "bench": cmd_bench, "fetch-x": cmd_fetch_x, "bench-x": cmd_bench_x,
+                "plot": cmd_plot}
     handlers[args.command or "demo"](args)
 
 

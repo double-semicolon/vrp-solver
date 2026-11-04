@@ -167,6 +167,12 @@ def test_tiny_sol_is_read():
     assert parse_sol(SOL) == ([[1, 2], [3]], 42)
 
 
+@pytest.mark.parametrize("written", ["42.0", "42.000000"])
+def test_integral_cost_written_as_decimal_is_accepted(written):
+    """X-n284-k15 などの BKS は Cost を小数の形で書いている (値は整数)。"""
+    assert parse_sol(SOL.replace("Cost 42", f"Cost {written}"))[1] == 42
+
+
 @pytest.mark.parametrize(
     "text, match",
     [
@@ -176,8 +182,11 @@ def test_tiny_sol_is_read():
         (SOL + "Time 1.5\n", "解釈できない"),
         (SOL + "Cost 43\n", "解釈できない"),      # Cost が2回
         ("Cost 42\n", "ルート"),
+        (SOL.replace("Cost 42", "Cost 42.5"), "整数"),   # 切り捨てて 42 にしない
+        (SOL.replace("Cost 42", "Cost 4e1"), "整数"),
     ],
-    ids=["no-cost", "gap-in-numbering", "empty-route", "unknown-line", "two-costs", "no-routes"],
+    ids=["no-cost", "gap-in-numbering", "empty-route", "unknown-line", "two-costs", "no-routes",
+         "fractional-cost", "exponent-cost"],
 )
 def test_broken_sol_is_rejected(text, match):
     with pytest.raises(ValueError, match=match):

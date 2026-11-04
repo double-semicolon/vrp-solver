@@ -21,12 +21,17 @@ depot が 1 番でないファイルは、並べ替えて読むのではなく�
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from ..model import Instance, Solution
 
 _SECTIONS = ("NODE_COORD_SECTION", "DEMAND_SECTION", "DEPOT_SECTION")
 _KNOWN_KEYS = {"NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "CAPACITY"}
+# X set の .sol 100 件のうち 3 件は Cost を "20215.0" や "72383.000000" と書いている。
+# EUC_2D のコストは整数なので、小数部がすべて 0 のときだけ受け付ける。
+# float() で読んで int() にすると、端数のある値が黙って切り捨てられる。
+_INTEGRAL = re.compile(r"(\d+)(?:\.0+)?")
 
 
 def load_vrp(path: str | Path) -> Instance:
@@ -125,7 +130,10 @@ def parse_sol(text: str) -> tuple[Solution, int]:
                 raise ValueError(f"空のルート: {head.strip()!r}")
             routes.append(route)
         elif tokens[0] == "Cost" and len(tokens) == 2 and cost is None:
-            cost = int(tokens[1])
+            m = _INTEGRAL.fullmatch(tokens[1])
+            if m is None:
+                raise ValueError(f"Cost が整数でない: {tokens[1]}")
+            cost = int(m.group(1))
         else:
             raise ValueError(f"解釈できない行: {line.strip()!r}")
     if not routes:
