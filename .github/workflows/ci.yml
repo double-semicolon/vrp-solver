@@ -1,0 +1,36 @@
+# push と pull request ごとに、Python 版と Java 版のテストを別々のジョブで走らせる。
+# Step 3 以降は 2 つの実装の一致が正しさの根拠になるので、どちらが壊れたかを
+# ジョブ名で見分けられるようにしておく。
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      # --locked: uv.lock と pyproject.toml が食い違っていたら失敗させる (黙って解決し直さない)
+      - run: uv sync --locked
+      - run: uv run pytest
+
+  java:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      # gradle-wrapper.jar が公式のものかの検証も、このアクションが行う
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew test

@@ -7,3 +7,5 @@ results/
 !.vscode/settings.json
 !.vscode/extensions.json
 /python/data/
+.gradle/
+/java/**/build/

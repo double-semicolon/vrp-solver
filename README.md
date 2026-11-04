@@ -1,5 +1,7 @@
 # vrp-solver
 
+[![CI](https://github.com/double-semicolon/vrp-solver/actions/workflows/ci.yml/badge.svg)](https://github.com/double-semicolon/vrp-solver/actions/workflows/ci.yml)
+
 > **就職活動用の制作物です。** 応募先企業への提出を前提に開発しており、
 > 動くことだけでなく、設計上の判断とその理由が README とコミット履歴から
 > 追えることを重視しています。
@@ -89,6 +91,14 @@ uv run vrp bench-x --max-n 300                       X set (顧客 300 件以下
 uv run pytest                                        テスト
 ```
 
+Java 版は `java/` で実行する。JDK 21 が要る (Gradle は wrapper が取得するので入れなくてよい)。
+
+```
+./gradlew test                                       テスト (Windows では gradlew.bat test)
+```
+
+push ごとに GitHub Actions で両方のテストが走る (`.github/workflows/ci.yml`)。
+
 ## 言語の役割分担
 
 **Python で検証し、Java で育てる。**
@@ -121,6 +131,11 @@ optional に切り出す。Java に移植する対象を純粋な探索ロジッ
 ⌈総需要 / 容量⌉ で決まる最小台数で、上限ではない。実際、X-n101-k25 の BKS は 26 ルート
 を使っている (X-n106-k14 の BKS は k と同じ 14 ルート)。k を上限にすると BKS が実行不可能になる。
 (`tests/test_cvrplib.py` で、BKS が実行可能で、採点し直したコストが公表値と一致することを確かめている)
+
+**Java の core は外部ライブラリに依存しない。** `java/core` (モデル・目的関数・ソルバ) は
+依存ゼロのサブプロジェクトにし、JSON の入出力などは別のサブプロジェクトに置く。Python では
+テストで確かめていた線引きを、Java ではビルドの依存関係として書くので、core から外部ライブラリを
+import するとコンパイルが通らない。(`java/settings.gradle.kts`、`java/core/build.gradle.kts`)
 
 **JSON は厳格に保つ。** `inf` / `NaN` を書かない。Java 側の出力と diff できることが、
 Step 3 の検証手段になる。(`serialize.py`。`null` への書き換えもせず、書き込みでも読み込みでも例外にする)
