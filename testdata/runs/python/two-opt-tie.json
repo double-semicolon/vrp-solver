@@ -1,0 +1,103 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "two-opt-tie",
+    "coords": [
+      [
+        5,
+        5
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        3,
+        7
+      ],
+      [
+        5,
+        9
+      ],
+      [
+        4,
+        10
+      ]
+    ],
+    "demands": [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "capacity": 6,
+    "num_vehicles": 1
+  },
+  "results": [
+    {
+      "instance": "two-opt-tie",
+      "solver": "nn",
+      "solution": [
+        [
+          3,
+          1,
+          2,
+          4,
+          5,
+          6
+        ]
+      ],
+      "cost": 22,
+      "feasible": true,
+      "elapsed_sec": 1.1699972674250603e-05,
+      "stats": {
+        "routes": 1
+      },
+      "history": []
+    },
+    {
+      "instance": "two-opt-tie",
+      "solver": "nn+2opt",
+      "solution": [
+        [
+          3,
+          1,
+          2,
+          6,
+          5,
+          4
+        ]
+      ],
+      "cost": 21,
+      "feasible": true,
+      "elapsed_sec": 3.270001616328955e-05,
+      "stats": {
+        "routes": 1,
+        "moves": 1
+      },
+      "history": [
+        {
+          "elapsed_sec": 9.899958968162537e-06,
+          "cost": 22,
+          "iteration": 0
+        },
+        {
+          "elapsed_sec": 2.5699962861835957e-05,
+          "cost": 21,
+          "iteration": 1
+        }
+      ]
+    }
+  ]
+}

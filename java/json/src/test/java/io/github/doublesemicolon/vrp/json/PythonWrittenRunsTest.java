@@ -34,8 +34,9 @@ class PythonWrittenRunsTest {
         try (Stream<Path> s = Files.list(dir)) {
             files = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
         }
-        if (files.size() != 6) {
-            throw new IllegalStateException(dir + " のファイル数が 6 でない: " + files);
+        // toy 3 件・手作り 1 件・2-opt の同点の例 1 件・ランダム 14 件 (顧客 30 / 50 / 200 件)
+        if (files.size() != 19) {
+            throw new IllegalStateException(dir + " のファイル数が 19 でない: " + files.size());
         }
         return files.stream();
     }

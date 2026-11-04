@@ -28,6 +28,7 @@ from make_testdata import (
     dist_text,
     distance_sources,
     invalid_expected_text,
+    without_time,
 )
 
 from vrp.model import build_distance_matrix
@@ -36,16 +37,6 @@ from vrp.serialize import load_run, loads
 
 REGEN = "uv run python tests/make_testdata.py で作り直す (意図した変更か確かめてから)"
 RUNS = build_runs()
-
-
-def _without_time(results):
-    """経過時間は実行のたびに変わるので、比較から外す。"""
-    out = []
-    for r in results:
-        d = {k: v for k, v in vars(r).items() if k != "elapsed_sec"}
-        d["history"] = [(h.cost, h.iteration) for h in r.history]
-        out.append(d)
-    return out
 
 
 def test_python_runs_cover_exactly_the_specs():
@@ -61,7 +52,40 @@ def test_python_runs_are_what_the_current_code_writes(name):
         # 手作りの結果は経過時間も固定なので丸ごと比べる
         assert back == results, REGEN
     else:
-        assert _without_time(back) == _without_time(results), REGEN
+        assert without_time(back) == without_time(results), REGEN
+
+
+def _two_opt_ties(inst) -> int:
+    """
+    最近傍法 + 2-opt の途中で、縮む距離が最大の move が複数あった回数。
+
+    improve_once を使わず、全ての (i, j) の gain を並べて数える。数えた後の
+    ルートの更新だけ improve_once に任せる (どれを選ぶかは数には影響しない)。
+    """
+    from vrp.solvers import nearest_neighbor
+    from vrp.solvers.two_opt import gain, improve_once
+
+    ties = 0
+    for route in nearest_neighbor(inst):
+        while True:
+            m = len(route)
+            gains = [gain(inst.D, route, i, j) for i in range(m - 1) for j in range(i + 1, m)]
+            best = max(gains, default=0)
+            if best <= 0:
+                break
+            ties += gains.count(best) > 1
+            improve_once(inst.D, route)
+    return ties
+
+
+def test_python_runs_contain_two_opt_ties():
+    """
+    2-opt の同点が突き合わせのデータに実際に入っていること。入っていなければ、
+    同点の決め方が Java と違っていても突き合わせは通ってしまう。
+    """
+    ties = {name: _two_opt_ties(inst) for name, (inst, _) in RUNS.items() if name != HANDMADE}
+    assert ties["two-opt-tie"] == 1
+    assert sum(ties.values()) >= 20, ties
 
 
 def test_python_runs_contain_the_cases_worth_cross_checking():

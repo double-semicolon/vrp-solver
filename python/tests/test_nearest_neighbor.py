@@ -88,3 +88,14 @@ def test_may_exceed_the_vehicle_limit_and_says_so():
     assert res.solution == [[1, 2], [3], [4]]
     assert not res.feasible
     assert validate(inst, [[1, 3], [2, 4]]) == []
+
+
+def test_tie_goes_to_the_smaller_customer_number():
+    """
+    同距離の客が複数あるときは番号の小さい方へ行く。Java 版も同じ決め方。
+
+    1 と 2 は depot から同じ距離 5。番号の小さい 1 を先に訪れる。
+    """
+    inst = _line("tie", [(0, 5), (5, 0)], [1, 1], capacity=10, k=1)
+    assert inst.D[0][1] == inst.D[0][2]   # 前提: 同距離
+    assert nearest_neighbor(inst) == [[1, 2]]

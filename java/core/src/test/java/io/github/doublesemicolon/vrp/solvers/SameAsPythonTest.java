@@ -8,6 +8,8 @@ import io.github.doublesemicolon.vrp.SolveResult;
 import io.github.doublesemicolon.vrp.TestData;
 import io.github.doublesemicolon.vrp.json.VrpJson;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,20 +32,29 @@ class SameAsPythonTest {
             "brute", BruteForce::solve,
             "bnb", BranchAndBound::solve,
             "bnb+nn", BranchAndBound::solveWithNnSeed,
-            "nn", NearestNeighbor::solve);
+            "nn", NearestNeighbor::solve,
+            "nn+2opt", TwoOpt::solve);
+
+    // 手作りの結果 (ソルバの出力ではない) は除く
+    static final String HANDMADE = "toy5-handmade.json";
 
     static Stream<Arguments> pythonResults() throws IOException {
+        List<Path> files;
+        try (Stream<Path> s = Files.list(TestData.runs().resolve("python"))) {
+            files = s.filter(p -> !p.getFileName().toString().equals(HANDMADE)).sorted().toList();
+        }
         List<Arguments> out = new ArrayList<>();
-        for (String name : List.of("toy8", "toy5-unlimited", "nn-over", "rand30-uniform-s0", "rand30-clustered-s1")) {
-            VrpJson.Run run = VrpJson.readRun(TestData.runs().resolve("python/" + name + ".json"));
+        for (Path file : files) {
+            VrpJson.Run run = VrpJson.readRun(file);
             for (SolveResult r : run.results()) {
-                if (SOLVERS.containsKey(r.solver())) {
-                    out.add(Arguments.of(name + " / " + r.solver(), run.instance(), r));
+                if (!SOLVERS.containsKey(r.solver())) {
+                    throw new IllegalStateException(file + " に知らないソルバ " + r.solver());
                 }
+                out.add(Arguments.of(run.instance().name() + " / " + r.solver(), run.instance(), r));
             }
         }
-        // toy8・toy5-unlimited・nn-over で 4 種、ランダム 2 件で nn の 1 種
-        if (out.size() != 3 * 4 + 2) {
+        // toy8・toy5-unlimited・nn-over は全 5 種、two-opt-tie とランダム 14 件は nn と nn+2opt
+        if (out.size() != 3 * 5 + 15 * 2) {
             throw new IllegalStateException("突き合わせる結果の数が想定と違う: " + out.size());
         }
         return out.stream();

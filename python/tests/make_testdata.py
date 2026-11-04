@@ -64,12 +64,29 @@ def _stored_random(n: int, seed: int, layout: str) -> Instance:
     return stored
 
 
+# 2-opt で縮む距離が同じ手が2つある小さい例。最近傍法のルート [3, 1, 2, 4, 5, 6] で
+# (i, j) = (3, 5) と (4, 5) がどちらも 1 縮む。i の小さい (3, 5) を選ぶと [3, 1, 2, 6, 5, 4]、
+# (4, 5) を選ぶと [3, 1, 2, 4, 6, 5] になる。同点の決め方が言語で違えば解が変わる
+TWO_OPT_TIE = Instance(
+    name="two-opt-tie",
+    coords=[(5, 5), (1, 5), (0, 8), (4, 2), (3, 7), (5, 9), (4, 10)],
+    demands=[0, 1, 1, 1, 1, 1, 1],
+    capacity=6,
+    num_vehicles=1,
+)
+
+# ランダムインスタンスのうち 2-opt の突き合わせに使うもの。顧客 50 件の 10 件は Python の
+# テスト (conftest.RANDOM_50) と同じ。顧客 200 件の 2 件は 2-opt の同点が多い (8 回と 6 回)
+RANDOM_SPECS = [(30, 0, "uniform"), (30, 1, "clustered")]
+RANDOM_SPECS += [(50, s, lay) for s in range(5) for lay in ("uniform", "clustered")]
+RANDOM_SPECS += [(200, 1, "uniform"), (200, 1, "clustered")]
+
 RUN_SPECS: list[tuple[Instance, list[str]]] = [
     (CASES["toy8"].inst, ALL),
     (CASES["toy5-unlimited"].inst, ALL),
     (CASES["nn-over"].inst, ALL),
-    (_stored_random(30, seed=0, layout="uniform"), HEURISTICS),
-    (_stored_random(30, seed=1, layout="clustered"), HEURISTICS),
+    (TWO_OPT_TIE, HEURISTICS),
+    *[(_stored_random(n, seed=s, layout=lay), HEURISTICS) for n, s, lay in RANDOM_SPECS],
 ]
 
 
@@ -128,7 +145,11 @@ def distance_sources() -> list[tuple[str, list]]:
     from vrp.instances import load_vrp
 
     out = [(c.inst.name, c.inst.coords) for c in CASES.values()]
-    out += [(inst.name, inst.coords) for inst, _ in RUN_SPECS if inst.name not in CASES]
+    # ランダムは小数の座標の代表として顧客 30 件の 2 件だけ。全部書くと顧客 200 件で
+    # 1 件 200 KB 近くになる。2-opt はほぼ全ての組の距離を見るので、距離がずれていれば
+    # 解の突き合わせ (Java の SameAsPythonTest) で落ちる
+    out += [(inst.name, inst.coords) for inst, _ in RUN_SPECS
+            if inst.name in ("rand30-uniform-s0", "rand30-clustered-s1")]
     for p in sorted((TESTDATA / "cvrplib").glob("*.vrp")):
         inst = load_vrp(p)
         out.append((inst.name, inst.coords))
@@ -240,9 +261,25 @@ def invalid_expected_text() -> str:
                       ensure_ascii=False, indent=2) + "\n"
 
 
+def without_time(results: list[SolveResult]) -> list[dict]:
+    """経過時間は実行のたびに変わるので、比較から外した形にする。"""
+    out = []
+    for r in results:
+        d = {k: v for k, v in vars(r).items() if k != "elapsed_sec"}
+        d["history"] = [(h.cost, h.iteration) for h in r.history]
+        out.append(d)
+    return out
+
+
 def main() -> None:
     for name, (inst, results) in build_runs().items():
-        print(save_run(RUNS_DIR / f"{name}.json", inst, results))
+        path = RUNS_DIR / f"{name}.json"
+        if path.exists():
+            old_inst, old = load_run(path)
+            # 経過時間しか違わないなら書き直さない (作り直すたびに差分が出ないように)
+            if old_inst == inst and without_time(old) == without_time(results):
+                continue
+        print(save_run(path, inst, results))
     INVALID_DIR.mkdir(parents=True, exist_ok=True)
     for name, (make, _) in INVALID.items():
         p = INVALID_DIR / f"{name}.json"

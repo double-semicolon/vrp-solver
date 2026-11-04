@@ -11,12 +11,13 @@ import random
 
 import pytest
 from conftest import NN_OVER, RANDOM_50, REFERENCE_IDS, REFERENCES, Reference
+from make_testdata import TWO_OPT_TIE
 
 from vrp.instances import TOY5, TOY8, random_instance
 from vrp.model import Instance
 from vrp.objective import route_cost, solution_cost, validate
 from vrp.solvers import nearest_neighbor, solve_nn_2opt, two_opt
-from vrp.solvers.two_opt import gain
+from vrp.solvers.two_opt import gain, improve_once
 
 INSTANCES = [TOY5, TOY8, *RANDOM_50]
 IDS = [i.name for i in INSTANCES]
@@ -118,3 +119,38 @@ def test_does_not_fix_a_vehicle_limit_violation():
     res = solve_nn_2opt(NN_OVER)
     assert len(res.solution) == 3
     assert not res.feasible
+
+
+def test_tie_goes_to_the_smallest_i_then_the_smallest_j():
+    """
+    縮む距離が同じ move が複数あるときの決め方。Java 版も同じ決め方で、解が完全に一致する。
+
+    最近傍法のルート [3, 1, 2, 4, 5, 6] で、(i, j) = (3, 5) と (4, 5) がどちらも 1 縮む。
+    i の小さい (3, 5) を選ぶので [3, 1, 2, 6, 5, 4] になる ((4, 5) なら [3, 1, 2, 4, 6, 5])。
+    """
+    inst = TWO_OPT_TIE
+    route = nearest_neighbor(inst)[0]
+    assert route == [3, 1, 2, 4, 5, 6]
+    assert gain(inst.D, route, 3, 5) == gain(inst.D, route, 4, 5) == 1   # 前提: 同点
+    assert max(gain(inst.D, route, i, j) for i in range(6) for j in range(i + 1, 6)) == 1
+
+    assert improve_once(inst.D, route) == 1
+    assert route == [3, 1, 2, 6, 5, 4]
+
+
+def test_tie_with_the_same_i_goes_to_the_smallest_j():
+    """
+    同点の決め方の後半 (i が同じなら j の小さい方)。上のテストは i が違う同点なので、
+    こちらが無いと「同じ i の中で j を大きい順に見る」誤りに気づけない。
+
+    ルート [1, 2, 3, 4, 5, 6] で (1, 3) と (1, 5) がどちらも 4 縮む。(1, 3) を選ぶ。
+    """
+    inst = Instance(name="two-opt-tie-same-i",
+                    coords=[(5, 5), (7, 4), (1, 6), (2, 8), (5, 7), (1, 2), (10, 5)],
+                    demands=[0, 1, 1, 1, 1, 1, 1], capacity=6, num_vehicles=1)
+    route = [1, 2, 3, 4, 5, 6]
+    assert gain(inst.D, route, 1, 3) == gain(inst.D, route, 1, 5) == 4   # 前提: 同点
+    assert max(gain(inst.D, route, i, j) for i in range(6) for j in range(i + 1, 6)) == 4
+
+    assert improve_once(inst.D, route) == 4
+    assert route == [1, 4, 3, 2, 5, 6]

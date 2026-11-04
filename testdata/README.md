@@ -43,7 +43,7 @@ CI では Python と Java が別々のジョブで走るので、ファイルを
 | ファイル | 書く側 | 書く側のテスト | 読む側のテスト |
 |---|---|---|---|
 | `distances/*.json` | Python | 今の定義で計算し直すと同じ (`test_testdata_files.py`) | Java の計算と全要素が一致 (`DistanceMatrixTest`) |
-| `runs/python/*.json` | Python | 今のソルバで作り直すと同じ。経過時間は除く | cost と feasible を計算し直すと一致 (`PythonWrittenRunsTest`) |
+| `runs/python/*.json` | Python | 今のソルバで作り直すと同じ。経過時間は除く。2-opt の同点が 20 回以上起きていること | cost と feasible を計算し直すと一致 (`PythonWrittenRunsTest`)。Java のソルバで解き直すと、解・stats・改善の履歴まで一致 (`SameAsPythonTest`) |
 | `runs/java/golden.json` | Java | 今の書き出しと同じバイト列 (`GoldenRunTest`) | `load_run` で読め、Java で組み立てた値になる |
 | `runs/invalid/*.json` | Python | 生成器の出力と同じ | 両言語とも、`invalid.json` の箇所を名指しして拒否 (`StrictReadingTest`) |
 | `cvrplib/parse/invalid/*` | Python | 生成器の出力と同じ | 両言語とも、`invalid.tsv` の理由を名指しして拒否 (`CvrplibTest`)。core のテストは JSON を読めないので表はタブ区切り |
