@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from .cvrplib import load_vrp
+from .cvrplib import load_sol, load_vrp
 from .generate import random_instance
 from .toy import TOY5, TOY8, TOYS
 
-__all__ = ["TOY5", "TOY8", "TOYS", "load_vrp", "random_instance"]
+__all__ = ["TOY5", "TOY8", "TOYS", "load_sol", "load_vrp", "random_instance"]

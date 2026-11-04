@@ -1,5 +1,5 @@
 """
-CVRPLib の .vrp ファイル (TSPLIB 形式) を読んで Instance を作る。
+CVRPLib のファイルを読む。.vrp (TSPLIB 形式) から Instance を、.sol から既知最良解 (BKS) を作る。
 
 対応するのは X set が使う範囲だけ:
   TYPE: CVRP / EDGE_WEIGHT_TYPE: EUC_2D / depot は1つで、ノード番号 1。
@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..model import Instance
+from ..model import Instance, Solution
 
 _SECTIONS = ("NODE_COORD_SECTION", "DEMAND_SECTION", "DEPOT_SECTION")
 _KNOWN_KEYS = {"NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "CAPACITY"}
@@ -88,6 +88,51 @@ def parse_vrp(text: str) -> Instance:
         capacity=capacity,
         num_vehicles=None,
     )
+
+
+def load_sol(path: str | Path) -> tuple[Solution, int]:
+    p = Path(path)
+    try:
+        return parse_sol(p.read_text(encoding="utf-8"))
+    except ValueError as e:
+        raise ValueError(f"{p.name}: {e}") from e
+
+
+def parse_sol(text: str) -> tuple[Solution, int]:
+    """
+    「Route #i: 顧客...」の行と「Cost N」の行から (解, 記載コスト) を返す。
+
+    顧客番号は depot を除いた 1..n で、Instance の添字とそのまま一致する
+    (.vrp の 1 番が depot なので、.vrp の i+1 番 = .sol の i = 添字 i)。
+    番号の範囲や重複はここでは見ない。それは validate の仕事で、
+    ここで同じ検査を書くと、検査の誤りが二重になって打ち消し合いうる。
+
+    記載コストは返すだけで信用しない。目的関数で計算し直した値と
+    比べるのは呼び出し側 (テスト・ベンチマーク)。
+    """
+    routes: Solution = []
+    cost: int | None = None
+    for line in text.splitlines():
+        tokens = line.split()
+        if not tokens:
+            continue
+        if tokens[0] == "Route":
+            head, _, body = line.partition(":")
+            if head.split()[1:] != [f"#{len(routes) + 1}"]:
+                raise ValueError(f"ルート番号が連続していない: {head.strip()!r}")
+            route = [int(t) for t in body.split()]
+            if not route:
+                raise ValueError(f"空のルート: {head.strip()!r}")
+            routes.append(route)
+        elif tokens[0] == "Cost" and len(tokens) == 2 and cost is None:
+            cost = int(tokens[1])
+        else:
+            raise ValueError(f"解釈できない行: {line.strip()!r}")
+    if not routes:
+        raise ValueError("ルートが1本もない")
+    if cost is None:
+        raise ValueError("Cost の行がない")
+    return routes, cost
 
 
 # ---------------------------------------------------------------- 検査

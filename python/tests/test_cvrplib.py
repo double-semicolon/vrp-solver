@@ -1,5 +1,5 @@
 """
-CVRPLib (.vrp) ローダのテスト。
+CVRPLib のローダ (.vrp と .sol) のテスト。
 
 期待値はローダと無関係な方法で出したもの (CVRPLib の一覧表と、DEMAND_SECTION を
 awk で合計した値)。ローダの出力から期待値を作ると、読み違いがそのまま正解になる。
@@ -12,8 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from vrp.instances import load_vrp
-from vrp.instances.cvrplib import parse_vrp
+from vrp.instances import load_sol, load_vrp
+from vrp.instances.cvrplib import parse_sol, parse_vrp
+from vrp.model import Instance
+from vrp.objective import solution_cost, validate
 
 DATA = Path(__file__).parent / "data" / "cvrplib"
 
@@ -116,3 +118,67 @@ def test_error_message_names_the_file(tmp_path):
     path.write_text(_edit("EUC_2D", "GEO"), encoding="utf-8")
     with pytest.raises(ValueError, match="broken.vrp"):
         load_vrp(path)
+
+
+# ---------------------------------------------------------------- BKS (.sol)
+#
+# ローダと距離計算を、外部の正解 (公表されている既知最良解) で確かめる。
+# 番号の対応や丸めが1か所でもずれていれば、実行可能にならないかコストが合わない。
+# ただし X set の座標は整数なので、距離がちょうど .5 になることはなく
+# (整数の平方根は整数か無理数)、四捨五入と偶数丸めの違いはここでは出ない。
+# その違いは test_model.py の test_distance_rounds_half_up が受け持つ。
+
+# (ファイル名, CVRPLib の一覧表に載っている BKS のコスト, BKS のルート数)
+BKS = [
+    ("X-n101-k25", 27591, 26),
+    ("X-n106-k14", 26362, 14),
+]
+
+
+@pytest.mark.parametrize("name, published, n_routes", BKS, ids=[b[0] for b in BKS])
+def test_bks_is_feasible_and_rescores_to_the_published_cost(name, published, n_routes):
+    inst = load_vrp(DATA / f"{name}.vrp")
+    routes, written = load_sol(DATA / f"{name}.sol")
+
+    assert validate(inst, routes) == []
+    # ファイルの Cost 行は信用せず、目的関数で採点し直した値を公表値と比べる
+    assert solution_cost(inst, routes) == published
+    assert written == published
+    assert len(routes) == n_routes
+
+
+def test_bks_can_use_more_routes_than_the_k_in_the_name():
+    """
+    X-n101-k25 の BKS は 26 ルート。名前の k (=25) を上限にすると BKS が
+    実行不可能になる。num_vehicles を None にした (#11) 根拠をデータで残す。
+    """
+    inst = load_vrp(DATA / "X-n101-k25.vrp")
+    routes, _ = load_sol(DATA / "X-n101-k25.sol")
+    capped = Instance(name=inst.name, coords=inst.coords, demands=inst.demands,
+                      capacity=inst.capacity, num_vehicles=25)
+    assert any("車両数超過" in e for e in validate(capped, routes))
+    assert validate(inst, routes) == []
+
+
+SOL = "Route #1: 1 2\nRoute #2: 3\nCost 42\n"
+
+
+def test_tiny_sol_is_read():
+    assert parse_sol(SOL) == ([[1, 2], [3]], 42)
+
+
+@pytest.mark.parametrize(
+    "text, match",
+    [
+        (SOL.replace("Cost 42\n", ""), "Cost"),
+        (SOL.replace("Route #2", "Route #3"), "連続"),
+        (SOL.replace("Route #2: 3", "Route #2:"), "空"),
+        (SOL + "Time 1.5\n", "解釈できない"),
+        (SOL + "Cost 43\n", "解釈できない"),      # Cost が2回
+        ("Cost 42\n", "ルート"),
+    ],
+    ids=["no-cost", "gap-in-numbering", "empty-route", "unknown-line", "two-costs", "no-routes"],
+)
+def test_broken_sol_is_rejected(text, match):
+    with pytest.raises(ValueError, match=match):
+        parse_sol(text)
