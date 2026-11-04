@@ -36,7 +36,10 @@ class Instance:
     coords: list[tuple[float, float]]  # index 0 が depot
     demands: list[int]                 # demands[0] は 0
     capacity: int                      # 1台あたりの積載量上限 Q
-    num_vehicles: int                  # 利用可能な車両数 K
+    # 利用可能な車両数 K。None は上限なし (CVRPLib の X set は台数を固定しない規約)。
+    # 「十分大きい数」で代用しないのは、上限なしを数値で偽装すると
+    # 表示や JSON で本物の上限と区別できなくなるため。
+    num_vehicles: int | None
     D: list[list[int]] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -51,7 +54,7 @@ class Instance:
             raise ValueError("負の需要がある")
         if max(self.demands) > self.capacity:
             raise ValueError("1台に積めない顧客が存在する")
-        if self.num_vehicles < 1:
+        if self.num_vehicles is not None and self.num_vehicles < 1:
             raise ValueError("車両が1台もない")
         self.D = build_distance_matrix(self.coords)
 

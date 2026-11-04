@@ -176,7 +176,9 @@ def plot_comparison(inst: Instance, results: list[SolveResult], ncols: int = 2) 
     for ax in flat[n_panels:]:
         ax.axis("off")                     # 余ったマスは枠ごと消す
 
-    fig.suptitle(f"{inst.name}  顧客 {inst.n} 件 / 容量 {inst.capacity} / 車両 {inst.num_vehicles} 台",
+    K = inst.num_vehicles
+    vehicles = "上限なし" if K is None else f"{K} 台"
+    fig.suptitle(f"{inst.name}  顧客 {inst.n} 件 / 容量 {inst.capacity} / 車両 {vehicles}",
                  fontsize=13)
     fig.tight_layout(rect=(0, 0, 1, 0.97))   # suptitle の場所を空ける
     return fig

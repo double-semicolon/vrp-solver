@@ -40,7 +40,7 @@ def validate(inst: Instance, sol: Solution) -> list[str]:
     """実行可能でない理由を列挙して返す。空リストなら実行可能解。"""
     errors: list[str] = []
 
-    if len(sol) > inst.num_vehicles:
+    if inst.num_vehicles is not None and len(sol) > inst.num_vehicles:
         errors.append(f"車両数超過: {len(sol)} 台使用 / 上限 {inst.num_vehicles} 台")
 
     visited: dict[int, int] = {}

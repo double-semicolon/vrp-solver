@@ -75,3 +75,13 @@ def test_unknown_customer_does_not_count_toward_load(inst):
     # -1 を demands[-1] (= 顧客 3 の需要 4) として数えると 11 になり、容量超過と誤判定する
     errors = validate(inst, [[1], [2, 3, -1]])
     assert not any("容量超過" in e for e in errors), errors
+
+
+def test_unlimited_vehicles_skips_the_count_check(inst):
+    """上限なしなら、1顧客1台の3台使用も実行可能。上限 2 台なら違反になる (対照)。"""
+    one_each = [[1], [2], [3]]
+    assert any("車両数超過" in e for e in validate(inst, one_each))
+
+    unlimited = Instance(name="square-unlimited", coords=inst.coords, demands=inst.demands,
+                         capacity=inst.capacity, num_vehicles=None)
+    assert validate(unlimited, one_each) == []

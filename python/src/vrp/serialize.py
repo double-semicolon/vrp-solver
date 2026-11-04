@@ -50,7 +50,8 @@ def instance_from_dict(d: dict) -> Instance:
         coords=[(float(x), float(y)) for x, y in d["coords"]],
         demands=[int(v) for v in d["demands"]],
         capacity=int(d["capacity"]),
-        num_vehicles=int(d["num_vehicles"]),
+        # null は上限なし。int(None) は TypeError なので分ける
+        num_vehicles=None if d["num_vehicles"] is None else int(d["num_vehicles"]),
     )
 
 

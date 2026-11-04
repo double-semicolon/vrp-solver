@@ -102,7 +102,11 @@ class BranchAndBound:
             )
             return
 
-        if len(routes) == self.inst.num_vehicles:
+        # None (上限なし) なら台数では止めない。1ルートに顧客が最低1人入るので
+        # 再帰は高々 n 段で終わる。len(routes) == None は常に False なので
+        # この検査が無くても動くが、偶然に頼らず意図を書いておく。
+        K = self.inst.num_vehicles
+        if K is not None and len(routes) == K:
             return                    # 車が尽きた。行き止まり
 
         demands, Q = self.inst.demands, self.inst.capacity

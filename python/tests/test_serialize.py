@@ -116,3 +116,15 @@ def test_unknown_format_is_rejected(tmp_path):
     p.write_text(json.dumps({"format": "vrp-run/0", "instance": {}, "results": []}), encoding="utf-8")
     with pytest.raises(ValueError, match="形式"):
         load_run(p)
+
+
+def test_unlimited_vehicles_round_trips_as_null(tmp_path):
+    """上限なし (None) はファイル上で null になり、読み戻すと None に戻る。"""
+    inst = random_instance(12, seed=6)
+    unlimited = instance_from_dict({**instance_to_dict(inst), "num_vehicles": None})
+    path = save_run(tmp_path / "run.json", unlimited, [solve_nn_2opt(unlimited)])
+
+    assert json.loads(path.read_text(encoding="utf-8"))["instance"]["num_vehicles"] is None
+    back, (res,) = load_run(path)
+    assert back.num_vehicles is None
+    assert res.feasible

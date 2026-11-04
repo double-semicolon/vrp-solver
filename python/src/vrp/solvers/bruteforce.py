@@ -49,7 +49,7 @@ def enumerate_solutions(
         if not remaining:
             yield routes              # 全員割当済み = 解が1つ完成
             return
-        if len(routes) == K:
+        if K is not None and len(routes) == K:   # None は上限なし
             return                    # 車が尽きた。行き止まり
 
         m = min(remaining)            # m は必ず「今作るルート」に入れる -> k! の重複が消える

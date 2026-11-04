@@ -52,7 +52,9 @@ def naive_all_solutions(inst: Instance) -> set[tuple[tuple[int, ...], ...]]:
     切り方の都合で「全顧客をちょうど1回ずつ訪問」「車両数 <= K」は
     構成上自動的に満たされるので、実際に見るのは容量だけでよい。
     """
-    n, K, Q, demands = inst.n, inst.num_vehicles, inst.capacity, inst.demands
+    n, Q, demands = inst.n, inst.capacity, inst.demands
+    # 上限なし (None) は n 台と同じ。1ルートに顧客が最低1人いるので n 本を超えない
+    K = n if inst.num_vehicles is None else inst.num_vehicles
     found: set[tuple[tuple[int, ...], ...]] = set()
 
     for tour in permutations(inst.customers):

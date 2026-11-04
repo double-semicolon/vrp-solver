@@ -37,6 +37,11 @@ def test_distance_matrix_is_symmetric_with_zero_diagonal():
             assert D[i][j] == D[j][i]
 
 
+def test_unlimited_vehicles_is_accepted():
+    """None は「上限なし」。0 台 (= 車両なし) とは別物として受け付ける。"""
+    assert make(num_vehicles=None).num_vehicles is None
+
+
 def test_instance_basics():
     inst = make()
     assert inst.n == 2

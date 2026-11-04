@@ -51,8 +51,10 @@ def show(inst: Instance, sol: Solution, label: str) -> None:
 
 
 def describe(inst: Instance) -> None:
+    K = inst.num_vehicles
+    vehicles = "上限なし" if K is None else f"{K} 台"
     print(f"インスタンス {inst.name}: 顧客 {inst.n} 件, 容量 {inst.capacity}, "
-          f"車両 {inst.num_vehicles} 台, 総需要 {sum(inst.demands)}")
+          f"車両 {vehicles}, 総需要 {sum(inst.demands)}")
     print(f"  必要最小台数 (下界) = {math.ceil(sum(inst.demands) / inst.capacity)}")
 
 

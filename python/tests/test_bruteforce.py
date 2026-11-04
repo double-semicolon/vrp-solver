@@ -18,7 +18,7 @@ COORDS = [(0, 0), (6, 1), (2, 7), (-5, 3), (-3, -6), (4, -4), (8, 6)]
 DEMANDS = [0, 3, 4, 2, 5, 3, 4]
 
 
-def make(n: int, capacity: int, num_vehicles: int) -> Instance:
+def make(n: int, capacity: int, num_vehicles: int | None) -> Instance:
     return Instance(
         name=f"t{n}-q{capacity}-k{num_vehicles}",
         coords=COORDS[: n + 1],
@@ -35,6 +35,8 @@ INSTANCES = [
     make(4, 100, 4),   # 容量が効かず、台数の分け方だけが自由
     make(5, 7, 3),     # 容量がきつく、分け方が限られる
     make(6, 9, 3),
+    make(5, 7, None),  # 上の (5, 7, 3) から上限を外す。4台以上の解が増える
+    make(4, 100, None),
 ]
 IDS = [inst.name for inst in INSTANCES]
 
@@ -85,3 +87,14 @@ def test_no_feasible_solution_raises():
     # 需要の合計 14 に対して 容量 5 x 2台 = 10 しか積めない
     with pytest.raises(ValueError, match="実行可能解が存在しない"):
         solve_brute_force(make(4, 5, 2))
+
+
+def test_unlimited_vehicles_enumerates_more_than_a_binding_limit():
+    """
+    上限を外すと解が増えることを直接確かめる。オラクルとの一致だけだと、
+    オラクルと列挙器が揃って「None を何台かに読み替える」誤りをしても通ってしまう。
+    """
+    limited = {canonical(s) for s in enumerate_solutions(make(5, 7, 3))}
+    unlimited = {canonical(s) for s in enumerate_solutions(make(5, 7, None))}
+    assert limited < unlimited
+    assert max(len(s) for s in unlimited) == 5   # 1顧客1台まで許される

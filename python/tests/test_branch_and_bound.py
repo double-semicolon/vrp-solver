@@ -44,6 +44,8 @@ INSTANCES = [
     _variant(TOY5, "toy5-tight", capacity=27),   # 総需要 53 / 2台 = ぎりぎり収まる
     _variant(TOY8, "toy8-K4", num_vehicles=4),
     _variant(TOY8, "toy8-tight", capacity=30),
+    _variant(TOY5, "toy5-unlimited", num_vehicles=None),
+    _variant(TOY8, "toy8-unlimited", num_vehicles=None),
 ]
 IDS = [i.name for i in INSTANCES]
 
@@ -217,3 +219,18 @@ def test_incumbent_and_nn_seed_are_exclusive():
 
 def test_unseeded_run_does_not_report_nn_seed():
     assert "nn_seed" not in solve_branch_and_bound(TOY5).stats
+
+
+def test_nn_is_always_usable_when_vehicles_are_unlimited():
+    """
+    上の nn-over と同じ配置で上限を外すと、最近傍法の3台の解が実行可能になり上界に使える。
+    """
+    inst = Instance(name="nn-over-unlimited",
+                    coords=[(0, 0), (1, 0), (2, 0), (0, 10), (0, -10)],
+                    demands=[0, 3, 3, 7, 7], capacity=10, num_vehicles=None)
+    nn = nearest_neighbor(inst)
+    assert len(nn) == 3 and is_feasible(inst, nn)
+
+    res = solve_branch_and_bound(inst, seed_with_nn=True)
+    assert res.stats["nn_seed"] is True
+    assert res.cost == solve_brute_force(inst).cost
