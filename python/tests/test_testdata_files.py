@@ -24,6 +24,7 @@ from make_testdata import (
     INVALID_EXPECTED,
     RUNS_DIR,
     build_runs,
+    cvrplib_parse_files,
     dist_text,
     distance_sources,
     invalid_expected_text,
@@ -173,3 +174,15 @@ def test_invalid_file_is_rejected_for_the_intended_reason(name):
     where = INVALID[name][1]
     if where is not None:
         assert where in msg, msg
+
+
+# ---------------------------------------------------------------- CVRPLib のローダの異常系
+
+
+def test_cvrplib_parse_files_are_what_the_generator_writes():
+    files = cvrplib_parse_files()
+    parse_dir = next(iter(files)).parent
+    on_disk = {p for p in parse_dir.rglob("*") if p.is_file()}
+    assert on_disk == set(files), REGEN
+    for path, text in files.items():
+        assert path.read_text(encoding="utf-8") == text, REGEN

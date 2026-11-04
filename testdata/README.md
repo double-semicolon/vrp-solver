@@ -6,6 +6,7 @@ Python 版と Java 版のテストが同じ入力と同じ正解を使うため�
 ```
 cases/          手書きの小さいインスタンスと、全探索で求めた期待値 (vrp-case/1)
 cvrplib/        CVRPLib X set の小さいインスタンス 2 件と、その既知最良解 (BKS)
+cvrplib/parse/  ローダの対照 (valid.vrp / valid.sol) と、両言語が拒否する壊れたファイル (invalid/)
 distances/      座標と、Python で計算した距離行列 (vrp-dist/1)
 runs/python/    Python のソルバが書いた結果ファイル (vrp-run/1)
 runs/java/      Java が書いた結果ファイル (vrp-run/1)
@@ -45,11 +46,12 @@ CI では Python と Java が別々のジョブで走るので、ファイルを
 | `runs/python/*.json` | Python | 今のソルバで作り直すと同じ。経過時間は除く | cost と feasible を計算し直すと一致 (`PythonWrittenRunsTest`) |
 | `runs/java/golden.json` | Java | 今の書き出しと同じバイト列 (`GoldenRunTest`) | `load_run` で読め、Java で組み立てた値になる |
 | `runs/invalid/*.json` | Python | 生成器の出力と同じ | 両言語とも、`invalid.json` の箇所を名指しして拒否 (`StrictReadingTest`) |
+| `cvrplib/parse/invalid/*` | Python | 生成器の出力と同じ | 両言語とも、`invalid.tsv` の理由を名指しして拒否 (`CvrplibTest`)。core のテストは JSON を読めないので表はタブ区切り |
 
 作り直し方 (定義を意図して変えたときだけ):
 
 ```
-cd python && uv run python tests/make_testdata.py       distances/、runs/python/、runs/invalid/
+cd python && uv run python tests/make_testdata.py       distances/、runs/python/、runs/invalid/、cvrplib/parse/
 cd java && VRP_REGENERATE=1 ./gradlew test               runs/java/golden.json
 ```
 
@@ -64,3 +66,13 @@ Python (`serialize.py`) と Java (`VrpJson`) で同じにする。
 - `null` を許すのは `num_vehicles` (上限なし)・`history` の `iteration`・`stats` の値だけ
 - `stats` の値は null・真偽値・整数・小数・文字列のどれか (入れ子にしない)
 - エラーの文言は `ファイル名: 箇所: 理由` の形。箇所 (`results[0].cost` など) は両言語で同じ書き方
+
+## CVRPLib のファイルを読むときの数の形
+
+Python (`cvrplib.py`) と Java (`Cvrplib.java`) で同じにする。標準の関数は言語ごとに緩さが違い
+(Python の `int` は `1_000` を、Java の `parseInt` は全角数字を、`parseDouble` は `0x1p4`・`1d`・`NaN` を読む)、
+任せると読めるファイルの範囲が食い違うので、正規表現で形を確かめてから変換する。
+
+- 整数: `-?[0-9]+`
+- 座標: `-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?`。有限でなければエラー (`1e400`)
+- `.sol` の Cost: `[0-9]+` か、小数部がすべて 0 のもの (`20215.0`)

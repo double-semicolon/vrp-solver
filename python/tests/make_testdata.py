@@ -259,6 +259,98 @@ def main() -> None:
         p = DIST_DIR / f"{name}.json"
         p.write_text(dist_text(name, coords), encoding="utf-8", newline="\n")
         print(p)
+    for path, text in cvrplib_parse_files().items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        print(path)
+
+
+# ---------------------------------------------------------------- CVRPLib のローダの異常系
+#
+# Python (cvrplib.py) と Java (Cvrplib.java) が同じファイルを同じ理由で拒否することを
+# 確かめるための、手書きの小さい .vrp / .sol と、それを1か所ずつ壊したもの。
+
+PARSE_DIR = TESTDATA / "cvrplib" / "parse"
+
+TINY_VRP = """\
+NAME : tiny
+COMMENT : hand written
+TYPE : CVRP
+DIMENSION : 3
+EDGE_WEIGHT_TYPE : EUC_2D
+CAPACITY : 10
+NODE_COORD_SECTION
+1 0 0
+2 3 4
+3 0 2
+DEMAND_SECTION
+1 0
+2 4
+3 5
+DEPOT_SECTION
+1
+-1
+EOF
+"""
+
+TINY_SOL = "Route #1: 1 2\nRoute #2: 3\nCost 42\n"
+
+
+def _vrp(old: str, new: str) -> str:
+    assert TINY_VRP.count(old) == 1, old
+    return TINY_VRP.replace(old, new)
+
+
+def _sol(old: str, new: str) -> str:
+    assert TINY_SOL.count(old) == 1, old
+    return TINY_SOL.replace(old, new)
+
+
+# ファイル名 -> (中身, エラーの文言に含まれるべき文字列)。文言は両言語で同じ
+CVRPLIB_INVALID: dict[str, tuple[str, str]] = {
+    # 未対応の形式
+    "geo.vrp": (_vrp("EUC_2D", "GEO"), "EDGE_WEIGHT_TYPE"),                # 距離の定義が違う
+    "tsp.vrp": (_vrp("TYPE : CVRP", "TYPE : TSP"), "TYPE"),
+    "unknown-key.vrp": (_vrp("COMMENT : hand written", "DISTANCE : 50"), "DISTANCE"),   # 知らない制約
+    "unknown-section.vrp": (_vrp("DEPOT_SECTION", "TIME_WINDOW_SECTION"), "セクション"),
+    "depot-not-1.vrp": (_vrp("DEPOT_SECTION\n1\n", "DEPOT_SECTION\n2\n"), "depot"),
+    "two-depots.vrp": (_vrp("DEPOT_SECTION\n1\n", "DEPOT_SECTION\n1\n2\n"), "depot"),
+    # 壊れたファイル
+    "no-terminator.vrp": (_vrp("1\n-1\n", "1\n"), "-1"),
+    "missing-row.vrp": (_vrp("3 0 2\n", ""), "NODE_COORD_SECTION"),       # 行が欠けている
+    "out-of-order.vrp": (_vrp("2 3 4\n3 0 2\n", "3 0 2\n2 3 4\n"), "番号"),  # 番号が順番どおりでない
+    "extra-column.vrp": (_vrp("2 4\n", "2 4 1\n"), "列数"),
+    "no-capacity.vrp": (_vrp("CAPACITY : 10\n", ""), "CAPACITY"),
+    "header-in-section.vrp": (_vrp("3 0 2\n", "3 0 2\nCAPACITY : 10\n"), "セクションの途中"),
+    "line-before-section.vrp": (_vrp("CAPACITY : 10\n", "CAPACITY : 10\n7 7\n"), "解釈できない行"),
+    # 数の形。標準の int() / float() / parseInt / parseDouble は言語ごとに緩さが違う
+    "underscore-in-int.vrp": (_vrp("CAPACITY : 10", "CAPACITY : 1_0"), "CAPACITY が整数でない"),   # Python の int は読む
+    "fullwidth-digit.vrp": (_vrp("3 5\n", "3 ５\n"), "需要 が整数でない"),                # 両方の標準関数が読む
+    "nan-coord.vrp": (_vrp("3 0 2\n", "3 nan 2\n"), "座標 が数でない"),                  # 両方の標準関数が読む
+    "hex-coord.vrp": (_vrp("3 0 2\n", "3 0x1p1 2\n"), "座標 が数でない"),                # Java の parseDouble は読む
+    "suffixed-coord.vrp": (_vrp("3 0 2\n", "3 0d 2\n"), "座標 が数でない"),              # Java の parseDouble は読む
+    "overflow-coord.vrp": (_vrp("3 0 2\n", "3 1e400 2\n"), "座標 が有限の数でない"),     # 読むと無限大になる
+    # .sol
+    "no-cost.sol": (_sol("Cost 42\n", ""), "Cost"),
+    "gap-in-numbering.sol": (_sol("Route #2", "Route #3"), "連続"),
+    "empty-route.sol": (_sol("Route #2: 3", "Route #2:"), "空"),
+    "unknown-line.sol": (TINY_SOL + "Time 1.5\n", "解釈できない"),
+    "two-costs.sol": (TINY_SOL + "Cost 43\n", "解釈できない"),
+    "no-routes.sol": ("Cost 42\n", "ルート"),
+    "fractional-cost.sol": (_sol("Cost 42", "Cost 42.5"), "整数"),     # 切り捨てて 42 にしない
+    "exponent-cost.sol": (_sol("Cost 42", "Cost 4e1"), "整数"),
+    "fullwidth-customer.sol": (_sol("Route #2: 3", "Route #2: ３"), "顧客番号 が整数でない"),
+}
+
+
+def cvrplib_parse_files() -> dict[Path, str]:
+    files = {PARSE_DIR / "valid.vrp": TINY_VRP, PARSE_DIR / "valid.sol": TINY_SOL}
+    for name, (text, _) in CVRPLIB_INVALID.items():
+        files[PARSE_DIR / "invalid" / name] = text
+    # Java の core は JSON を読めないので、理由の表はタブ区切りにする
+    files[PARSE_DIR / "invalid.tsv"] = "".join(
+        f"{name}\t{why}\n" for name, (_, why) in sorted(CVRPLIB_INVALID.items()))
+    return files
 
 
 if __name__ == "__main__":

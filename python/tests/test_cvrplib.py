@@ -49,74 +49,49 @@ def test_x_n101_rows_land_on_the_right_nodes():
     assert inst.D[0][1] == 554
 
 
-# ---------------------------------------------------------------- 未対応の形式
+# ---------------------------------------------------------------- 未対応の形式・壊れたファイル
+#
+# 壊れたファイルは testdata/cvrplib/parse/invalid/ にあり (作るのは make_testdata.py)、
+# Java の CvrplibTest も同じファイルを同じ理由で拒否することを確かめている。
 
-TINY = """\
-NAME : tiny
-COMMENT : hand written
-TYPE : CVRP
-DIMENSION : 3
-EDGE_WEIGHT_TYPE : EUC_2D
-CAPACITY : 10
-NODE_COORD_SECTION
-1 0 0
-2 3 4
-3 0 2
-DEMAND_SECTION
-1 0
-2 4
-3 5
-DEPOT_SECTION
-1
--1
-EOF
-"""
-
-
-def _edit(old: str, new: str) -> str:
-    assert TINY.count(old) == 1, old
-    return TINY.replace(old, new)
+PARSE = DATA / "parse"
+TINY = (PARSE / "valid.vrp").read_text(encoding="utf-8")
+INVALID = [tuple(line.split("\t")) for line in
+           (PARSE / "invalid.tsv").read_text(encoding="utf-8").splitlines()]
 
 
 def test_tiny_text_is_read():
-    """以下のエラーのテストが「元の文が読めない」せいで通っていないことの確認。"""
+    """異常系のテストが「元の文が読めない」せいで通っていないことの確認 (対照)。"""
     inst = parse_vrp(TINY)
     assert inst.n == 2 and inst.capacity == 10 and inst.demands == [0, 4, 5]
     assert inst.D[0][1] == 5
 
 
 def test_crlf_and_missing_eof_are_accepted():
-    """CVRPLib の配布ファイルは CRLF。EOF 行は TSPLIB でも省略可能。"""
-    text = _edit("EOF\n", "").replace("\n", "\r\n")
+    """CVRPLib の配布ファイルは CRLF。EOF 行は TSPLIB でも省略可能。
+
+    CRLF はファイルにせずここで作る。.gitattributes が eol=lf なので、置いても LF になる。
+    """
+    text = TINY.replace("EOF\n", "").replace("\n", "\r\n")
     assert parse_vrp(text).demands == [0, 4, 5]
 
 
-@pytest.mark.parametrize(
-    "text, match",
-    [
-        (_edit("EUC_2D", "GEO"), "EDGE_WEIGHT_TYPE"),          # 距離の定義が違う
-        (_edit("TYPE : CVRP", "TYPE : TSP"), "TYPE"),
-        (_edit("COMMENT : hand written", "DISTANCE : 50"), "DISTANCE"),   # 知らない制約
-        (_edit("DEPOT_SECTION\n1\n", "DEPOT_SECTION\n2\n"), "depot"),
-        (_edit("DEPOT_SECTION\n1\n", "DEPOT_SECTION\n1\n2\n"), "depot"),   # depot が2つ
-        (_edit("1\n-1\n", "1\n"), "-1"),
-        (_edit("3 0 2\n", ""), "NODE_COORD_SECTION"),          # 行が欠けている
-        (_edit("2 3 4\n3 0 2\n", "3 0 2\n2 3 4\n"), "番号"),     # 番号が順番どおりでない
-        (_edit("2 4\n", "2 4 1\n"), "列数"),
-        (_edit("CAPACITY : 10\n", ""), "CAPACITY"),
-        (_edit("DEPOT_SECTION", "TIME_WINDOW_SECTION"), "セクション"),
-    ],
-    ids=["geo", "tsp", "unknown-key", "depot-not-1", "two-depots", "no-terminator",
-         "missing-row", "out-of-order", "extra-column", "no-capacity", "unknown-section"],
-)
-def test_unsupported_or_broken_file_is_rejected(text, match):
-    with pytest.raises(ValueError, match=match):
-        parse_vrp(text)
+def test_invalid_table_covers_every_file():
+    assert sorted(n for n, _ in INVALID) == sorted(p.name for p in (PARSE / "invalid").iterdir())
+
+
+@pytest.mark.parametrize("name, why", INVALID, ids=[n for n, _ in INVALID])
+def test_unsupported_or_broken_file_is_rejected(name, why):
+    load = load_vrp if name.endswith(".vrp") else load_sol
+    with pytest.raises(ValueError) as e:
+        load(PARSE / "invalid" / name)
+    msg = str(e.value)
+    assert msg.startswith(f"{name}: ") and why in msg, msg
 
 
 def test_error_message_names_the_file(tmp_path):
     path = tmp_path / "broken.vrp"
-    path.write_text(_edit("EUC_2D", "GEO"), encoding="utf-8")
+    path.write_text(TINY.replace("EUC_2D", "GEO"), encoding="utf-8")
     with pytest.raises(ValueError, match="broken.vrp"):
         load_vrp(path)
 
@@ -161,7 +136,7 @@ def test_bks_can_use_more_routes_than_the_k_in_the_name():
     assert validate(inst, routes) == []
 
 
-SOL = "Route #1: 1 2\nRoute #2: 3\nCost 42\n"
+SOL = (PARSE / "valid.sol").read_text(encoding="utf-8")
 
 
 def test_tiny_sol_is_read():
@@ -172,23 +147,3 @@ def test_tiny_sol_is_read():
 def test_integral_cost_written_as_decimal_is_accepted(written):
     """X-n284-k15 などの BKS は Cost を小数の形で書いている (値は整数)。"""
     assert parse_sol(SOL.replace("Cost 42", f"Cost {written}"))[1] == 42
-
-
-@pytest.mark.parametrize(
-    "text, match",
-    [
-        (SOL.replace("Cost 42\n", ""), "Cost"),
-        (SOL.replace("Route #2", "Route #3"), "連続"),
-        (SOL.replace("Route #2: 3", "Route #2:"), "空"),
-        (SOL + "Time 1.5\n", "解釈できない"),
-        (SOL + "Cost 43\n", "解釈できない"),      # Cost が2回
-        ("Cost 42\n", "ルート"),
-        (SOL.replace("Cost 42", "Cost 42.5"), "整数"),   # 切り捨てて 42 にしない
-        (SOL.replace("Cost 42", "Cost 4e1"), "整数"),
-    ],
-    ids=["no-cost", "gap-in-numbering", "empty-route", "unknown-line", "two-costs", "no-routes",
-         "fractional-cost", "exponent-cost"],
-)
-def test_broken_sol_is_rejected(text, match):
-    with pytest.raises(ValueError, match=match):
-        parse_sol(text)

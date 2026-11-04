@@ -1,0 +1,28 @@
+depot-not-1.vrp	depot
+empty-route.sol	空
+exponent-cost.sol	整数
+extra-column.vrp	列数
+fractional-cost.sol	整数
+fullwidth-customer.sol	顧客番号 が整数でない
+fullwidth-digit.vrp	需要 が整数でない
+gap-in-numbering.sol	連続
+geo.vrp	EDGE_WEIGHT_TYPE
+header-in-section.vrp	セクションの途中
+hex-coord.vrp	座標 が数でない
+line-before-section.vrp	解釈できない行
+missing-row.vrp	NODE_COORD_SECTION
+nan-coord.vrp	座標 が数でない
+no-capacity.vrp	CAPACITY
+no-cost.sol	Cost
+no-routes.sol	ルート
+no-terminator.vrp	-1
+out-of-order.vrp	番号
+overflow-coord.vrp	座標 が有限の数でない
+suffixed-coord.vrp	座標 が数でない
+tsp.vrp	TYPE
+two-costs.sol	解釈できない
+two-depots.vrp	depot
+underscore-in-int.vrp	CAPACITY が整数でない
+unknown-key.vrp	DISTANCE
+unknown-line.sol	解釈できない
+unknown-section.vrp	セクション

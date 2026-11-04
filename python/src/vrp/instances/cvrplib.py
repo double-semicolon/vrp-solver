@@ -17,10 +17,15 @@ CVRPLib のファイルを読む。.vrp (TSPLIB 形式) から Instance を、.s
 
 depot が 1 番でないファイルは、並べ替えて読むのではなくエラーにする。
 並べ替えると顧客番号がファイルとずれ、.sol の解と照合するときに対応表が要る。
+
+数は正規表現で形を確かめてから変換する。int() / float() は 1_000 や全角数字、
+nan を受け付け、Java の parseInt / parseDouble は全角数字や 0x1p4、NaN を受け付ける。
+標準の関数に任せると、Python と Java (Cvrplib.java) で読めるファイルの範囲が食い違う。
 """
 
 from __future__ import annotations
 
+import math
 import re
 from pathlib import Path
 
@@ -31,7 +36,9 @@ _KNOWN_KEYS = {"NAME", "COMMENT", "TYPE", "DIMENSION", "EDGE_WEIGHT_TYPE", "CAPA
 # X set の .sol 100 件のうち 3 件は Cost を "20215.0" や "72383.000000" と書いている。
 # EUC_2D のコストは整数なので、小数部がすべて 0 のときだけ受け付ける。
 # float() で読んで int() にすると、端数のある値が黙って切り捨てられる。
-_INTEGRAL = re.compile(r"(\d+)(?:\.0+)?")
+_INTEGRAL = re.compile(r"([0-9]+)(?:\.0+)?")
+_INT = re.compile(r"-?[0-9]+")
+_REAL = re.compile(r"-?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?")
 
 
 def load_vrp(path: str | Path) -> Instance:
@@ -80,7 +87,7 @@ def parse_vrp(text: str) -> Instance:
     coords_rows = _numbered(rows["NODE_COORD_SECTION"], "NODE_COORD_SECTION", dimension, width=2)
     demand_rows = _numbered(rows["DEMAND_SECTION"], "DEMAND_SECTION", dimension, width=1)
 
-    depots = [int(t[0]) for t in rows["DEPOT_SECTION"]]
+    depots = [_int(t[0], "DEPOT_SECTION") for t in rows["DEPOT_SECTION"]]
     if not depots or depots[-1] != -1:
         raise ValueError("DEPOT_SECTION が -1 で終わっていない")
     if depots[:-1] != [1]:
@@ -88,8 +95,8 @@ def parse_vrp(text: str) -> Instance:
 
     return Instance(
         name=header.get("NAME", ""),
-        coords=[(float(x), float(y)) for x, y in coords_rows],
-        demands=[int(d) for (d,) in demand_rows],
+        coords=[(_real(x, "座標"), _real(y, "座標")) for x, y in coords_rows],
+        demands=[_int(d, "需要") for (d,) in demand_rows],
         capacity=capacity,
         num_vehicles=None,
     )
@@ -125,7 +132,7 @@ def parse_sol(text: str) -> tuple[Solution, int]:
             head, _, body = line.partition(":")
             if head.split()[1:] != [f"#{len(routes) + 1}"]:
                 raise ValueError(f"ルート番号が連続していない: {head.strip()!r}")
-            route = [int(t) for t in body.split()]
+            route = [_int(t, "顧客番号") for t in body.split()]
             if not route:
                 raise ValueError(f"空のルート: {head.strip()!r}")
             routes.append(route)
@@ -156,7 +163,7 @@ def _expect(header: dict[str, str], key: str, value: str) -> None:
 def _int_field(header: dict[str, str], key: str) -> int:
     if key not in header:
         raise ValueError(f"{key} がない")
-    return int(header[key])
+    return _int(header[key], key)
 
 
 def _numbered(rows: list[list[str]], section: str, dimension: int, width: int) -> list[list[str]]:
@@ -171,6 +178,22 @@ def _numbered(rows: list[list[str]], section: str, dimension: int, width: int) -
     for i, r in enumerate(rows, start=1):
         if len(r) != width + 1:
             raise ValueError(f"{section} の列数が違う: {' '.join(r)}")
-        if int(r[0]) != i:
+        if _int(r[0], section) != i:
             raise ValueError(f"{section} の番号が連続していない: {i} 番目の行が {r[0]}")
     return [r[1:] for r in rows]
+
+
+def _int(token: str, what: str) -> int:
+    if not _INT.fullmatch(token):
+        raise ValueError(f"{what} が整数でない: {token!r}")
+    return int(token)
+
+
+def _real(token: str, what: str) -> float:
+    if not _REAL.fullmatch(token):
+        raise ValueError(f"{what} が数でない: {token!r}")
+    x = float(token)
+    # 1e400 は無限大になる。距離の計算まで進むと ValueError ではなく OverflowError になる
+    if not math.isfinite(x):
+        raise ValueError(f"{what} が有限の数でない: {token!r}")
+    return x
