@@ -1,5 +1,7 @@
 plugins {
     `java-library`
+    // testdata のケース (vrp-case/1) を読む Cases を、core のテストからも使えるようにする
+    `java-test-fixtures`
 }
 
 dependencies {
@@ -10,4 +12,8 @@ dependencies {
     implementation("tools.jackson.core:jackson-databind")
 
     testImplementation(testFixtures(project(":core")))
+    testFixturesImplementation(testFixtures(project(":core")))
+    // Cases はケースのファイルを Jackson で読む。本体の implementation は見えないので別に足す
+    testFixturesImplementation(platform("tools.jackson:jackson-bom:3.2.4"))
+    testFixturesImplementation("tools.jackson.core:jackson-databind")
 }

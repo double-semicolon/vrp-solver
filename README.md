@@ -115,7 +115,8 @@ Java 版の正しさを「Python 版と同じ答えが出るか」で機械的�
 
 **参照実装を凍結する。** 全探索は速くしない。toy インスタンスでの最適値・解の総数・
 探索ノード数をテストに焼き、以降の高速化は全て「これと同じ答えに到達すること」で検証する。
-(`testdata/cases/` に言語共通の JSON として置き、Python と Java の両方のテストが読む。branch and bound と 2-opt は toy で同じ最適値に届くことをテストしている)
+(`testdata/cases/` に言語共通の JSON として置き、Python と Java の両方のテストが読む。branch and bound と 2-opt は toy で同じ最適値に届くことをテストしている。
+Java の全探索と branch and bound は、最適値だけでなく返す解・刈った数・改善の履歴まで Python の出力と一致することを確かめている)
 
 **コストは必ず目的関数モジュールで採点し直す。** ソルバが差分計算で積算した値は
 そのまま信用せず、結果を返す時点で計算し直して上書きする。差分計算のバグが結果として通らない。
@@ -135,7 +136,8 @@ optional に切り出す。Java に移植する対象を純粋な探索ロジッ
 **Java の core は外部ライブラリに依存しない。** `java/core` (モデル・目的関数・ソルバ) は
 依存ゼロのサブプロジェクトにし、JSON の入出力は別のサブプロジェクト `java/json` (Jackson) に置く。Python では
 テストで確かめていた線引きを、Java ではビルドの依存関係として書くので、core から外部ライブラリを
-import するとコンパイルが通らない。(`java/settings.gradle.kts`、`java/core/build.gradle.kts`)
+import するとコンパイルが通らない。core の**テスト**だけは testdata の JSON を読むために json に依存するが、
+テスト用の依存は本体のコンパイルに入らないので、この線引きは崩れない。(`java/settings.gradle.kts`、`java/core/build.gradle.kts`)
 
 **JSON は厳格に保つ。両言語で同じ規則にする。** `inf` / `NaN` を書かない (`null` への書き換えもせず、
 書き込みでも読み込みでも例外にする)。読むときは、知らないキー・重複したキー・整数の欄の `3.7` や `true` も拒否する。
