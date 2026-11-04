@@ -1,0 +1,229 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "toy5-unlimited",
+    "coords": [
+      [
+        50.0,
+        50.0
+      ],
+      [
+        20.0,
+        30.0
+      ],
+      [
+        25.0,
+        70.0
+      ],
+      [
+        75.0,
+        65.0
+      ],
+      [
+        80.0,
+        25.0
+      ],
+      [
+        55.0,
+        20.0
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 30,
+    "num_vehicles": null
+  },
+  "results": [
+    {
+      "instance": "toy5-unlimited",
+      "solver": "nn",
+      "solution": [
+        [
+          3,
+          4
+        ],
+        [
+          5,
+          1,
+          2
+        ]
+      ],
+      "cost": 246,
+      "feasible": true,
+      "elapsed_sec": 1.3699987903237343e-05,
+      "stats": {
+        "routes": 2
+      },
+      "history": []
+    },
+    {
+      "instance": "toy5-unlimited",
+      "solver": "nn+2opt",
+      "solution": [
+        [
+          3,
+          4
+        ],
+        [
+          5,
+          1,
+          2
+        ]
+      ],
+      "cost": 246,
+      "feasible": true,
+      "elapsed_sec": 1.9000028260052204e-05,
+      "stats": {
+        "routes": 2,
+        "moves": 0
+      },
+      "history": [
+        {
+          "elapsed_sec": 8.200004231184721e-06,
+          "cost": 246,
+          "iteration": 0
+        }
+      ]
+    },
+    {
+      "instance": "toy5-unlimited",
+      "solver": "brute",
+      "solution": [
+        [
+          2,
+          1,
+          5
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 246,
+      "feasible": true,
+      "elapsed_sec": 0.0003093000268563628,
+      "stats": {
+        "nodes": 101,
+        "solutions": 50
+      },
+      "history": [
+        {
+          "elapsed_sec": 3.250001464039087e-05,
+          "cost": 332,
+          "iteration": 1
+        },
+        {
+          "elapsed_sec": 4.060001811012626e-05,
+          "cost": 288,
+          "iteration": 2
+        },
+        {
+          "elapsed_sec": 6.900000153109431e-05,
+          "cost": 277,
+          "iteration": 6
+        },
+        {
+          "elapsed_sec": 0.0001382000045850873,
+          "cost": 260,
+          "iteration": 18
+        },
+        {
+          "elapsed_sec": 0.0002704000216908753,
+          "cost": 246,
+          "iteration": 44
+        }
+      ]
+    },
+    {
+      "instance": "toy5-unlimited",
+      "solver": "bnb",
+      "solution": [
+        [
+          2,
+          1,
+          5
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 246,
+      "feasible": true,
+      "elapsed_sec": 0.00033599999733269215,
+      "stats": {
+        "nodes": 78,
+        "pruned": 24,
+        "route_prunes": 21,
+        "leaves": 5,
+        "initial_upper_bound": null
+      },
+      "history": [
+        {
+          "elapsed_sec": 2.1099986042827368e-05,
+          "cost": 332,
+          "iteration": 6
+        },
+        {
+          "elapsed_sec": 2.829998265951872e-05,
+          "cost": 288,
+          "iteration": 7
+        },
+        {
+          "elapsed_sec": 5.830003647133708e-05,
+          "cost": 277,
+          "iteration": 14
+        },
+        {
+          "elapsed_sec": 0.0001409000251442194,
+          "cost": 260,
+          "iteration": 33
+        },
+        {
+          "elapsed_sec": 0.00028470001416280866,
+          "cost": 246,
+          "iteration": 68
+        }
+      ]
+    },
+    {
+      "instance": "toy5-unlimited",
+      "solver": "bnb+nn",
+      "solution": [
+        [
+          3,
+          4
+        ],
+        [
+          5,
+          1,
+          2
+        ]
+      ],
+      "cost": 246,
+      "feasible": true,
+      "elapsed_sec": 0.0002807999844662845,
+      "stats": {
+        "nodes": 62,
+        "pruned": 22,
+        "route_prunes": 28,
+        "leaves": 0,
+        "initial_upper_bound": 246,
+        "nn_seed": true
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.0,
+          "cost": 246,
+          "iteration": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,289 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "toy8",
+    "coords": [
+      [
+        50.0,
+        50.0
+      ],
+      [
+        18.0,
+        32.0
+      ],
+      [
+        22.0,
+        72.0
+      ],
+      [
+        40.0,
+        85.0
+      ],
+      [
+        72.0,
+        78.0
+      ],
+      [
+        88.0,
+        55.0
+      ],
+      [
+        78.0,
+        22.0
+      ],
+      [
+        48.0,
+        12.0
+      ],
+      [
+        30.0,
+        20.0
+      ]
+    ],
+    "demands": [
+      0,
+      10,
+      8,
+      13,
+      7,
+      11,
+      9,
+      12,
+      6
+    ],
+    "capacity": 40,
+    "num_vehicles": 3
+  },
+  "results": [
+    {
+      "instance": "toy8",
+      "solver": "nn",
+      "solution": [
+        [
+          2,
+          3,
+          4,
+          5
+        ],
+        [
+          8,
+          1,
+          7,
+          6
+        ]
+      ],
+      "cost": 318,
+      "feasible": true,
+      "elapsed_sec": 3.300001844763756e-05,
+      "stats": {
+        "routes": 2
+      },
+      "history": []
+    },
+    {
+      "instance": "toy8",
+      "solver": "nn+2opt",
+      "solution": [
+        [
+          2,
+          3,
+          4,
+          5
+        ],
+        [
+          1,
+          8,
+          7,
+          6
+        ]
+      ],
+      "cost": 303,
+      "feasible": true,
+      "elapsed_sec": 6.140000186860561e-05,
+      "stats": {
+        "routes": 2,
+        "moves": 1
+      },
+      "history": [
+        {
+          "elapsed_sec": 2.5999965146183968e-05,
+          "cost": 318,
+          "iteration": 0
+        },
+        {
+          "elapsed_sec": 5.4100004490464926e-05,
+          "cost": 303,
+          "iteration": 1
+        }
+      ]
+    },
+    {
+      "instance": "toy8",
+      "solver": "brute",
+      "solution": [
+        [
+          1,
+          8,
+          7,
+          6
+        ],
+        [
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "cost": 303,
+      "feasible": true,
+      "elapsed_sec": 0.10628160001942888,
+      "stats": {
+        "nodes": 32951,
+        "solutions": 15012
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.0012185000232420862,
+          "cost": 361,
+          "iteration": 1
+        },
+        {
+          "elapsed_sec": 0.004295999999158084,
+          "cost": 359,
+          "iteration": 397
+        },
+        {
+          "elapsed_sec": 0.01978979998966679,
+          "cost": 352,
+          "iteration": 2449
+        },
+        {
+          "elapsed_sec": 0.062097400019411,
+          "cost": 344,
+          "iteration": 7417
+        },
+        {
+          "elapsed_sec": 0.06296369998017326,
+          "cost": 328,
+          "iteration": 7576
+        },
+        {
+          "elapsed_sec": 0.06887680001091212,
+          "cost": 319,
+          "iteration": 8521
+        },
+        {
+          "elapsed_sec": 0.103803500009235,
+          "cost": 303,
+          "iteration": 14479
+        }
+      ]
+    },
+    {
+      "instance": "toy8",
+      "solver": "bnb",
+      "solution": [
+        [
+          1,
+          8,
+          7,
+          6
+        ],
+        [
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "cost": 303,
+      "feasible": true,
+      "elapsed_sec": 0.07061310001881793,
+      "stats": {
+        "nodes": 6471,
+        "pruned": 3082,
+        "route_prunes": 23477,
+        "leaves": 7,
+        "initial_upper_bound": null
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.0017587000038474798,
+          "cost": 361,
+          "iteration": 462
+        },
+        {
+          "elapsed_sec": 0.004798599984496832,
+          "cost": 359,
+          "iteration": 683
+        },
+        {
+          "elapsed_sec": 0.01829759997781366,
+          "cost": 352,
+          "iteration": 2242
+        },
+        {
+          "elapsed_sec": 0.044508100021630526,
+          "cost": 344,
+          "iteration": 4759
+        },
+        {
+          "elapsed_sec": 0.04608860000735149,
+          "cost": 328,
+          "iteration": 4959
+        },
+        {
+          "elapsed_sec": 0.048552699969150126,
+          "cost": 319,
+          "iteration": 5225
+        },
+        {
+          "elapsed_sec": 0.06815629999618977,
+          "cost": 303,
+          "iteration": 6336
+        }
+      ]
+    },
+    {
+      "instance": "toy8",
+      "solver": "bnb+nn",
+      "solution": [
+        [
+          1,
+          8,
+          7,
+          6
+        ],
+        [
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "cost": 303,
+      "feasible": true,
+      "elapsed_sec": 0.05404580000322312,
+      "stats": {
+        "nodes": 3765,
+        "pruned": 2075,
+        "route_prunes": 23656,
+        "leaves": 1,
+        "initial_upper_bound": 318,
+        "nn_seed": true
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.0,
+          "cost": 318,
+          "iteration": null
+        },
+        {
+          "elapsed_sec": 0.05287080002017319,
+          "cost": 303,
+          "iteration": 3630
+        }
+      ]
+    }
+  ]
+}

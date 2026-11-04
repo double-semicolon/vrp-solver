@@ -1,0 +1,183 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "nn-over",
+    "coords": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0
+      ],
+      [
+        2.0,
+        0.0
+      ],
+      [
+        0.0,
+        10.0
+      ],
+      [
+        0.0,
+        -10.0
+      ]
+    ],
+    "demands": [
+      0,
+      3,
+      3,
+      7,
+      7
+    ],
+    "capacity": 10,
+    "num_vehicles": 2
+  },
+  "results": [
+    {
+      "instance": "nn-over",
+      "solver": "nn",
+      "solution": [
+        [
+          1,
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ]
+      ],
+      "cost": 44,
+      "feasible": false,
+      "elapsed_sec": 8.699949830770493e-06,
+      "stats": {
+        "routes": 3
+      },
+      "history": []
+    },
+    {
+      "instance": "nn-over",
+      "solver": "nn+2opt",
+      "solution": [
+        [
+          1,
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ]
+      ],
+      "cost": 44,
+      "feasible": false,
+      "elapsed_sec": 1.3999990187585354e-05,
+      "stats": {
+        "routes": 3,
+        "moves": 0
+      },
+      "history": [
+        {
+          "elapsed_sec": 6.599992047995329e-06,
+          "cost": 44,
+          "iteration": 0
+        }
+      ]
+    },
+    {
+      "instance": "nn-over",
+      "solver": "brute",
+      "solution": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "cost": 43,
+      "feasible": true,
+      "elapsed_sec": 4.080001963302493e-05,
+      "stats": {
+        "nodes": 13,
+        "solutions": 2
+      },
+      "history": [
+        {
+          "elapsed_sec": 2.800003858283162e-05,
+          "cost": 43,
+          "iteration": 1
+        }
+      ]
+    },
+    {
+      "instance": "nn-over",
+      "solver": "bnb",
+      "solution": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "cost": 43,
+      "feasible": true,
+      "elapsed_sec": 6.019999273121357e-05,
+      "stats": {
+        "nodes": 13,
+        "pruned": 1,
+        "route_prunes": 0,
+        "leaves": 1,
+        "initial_upper_bound": null
+      },
+      "history": [
+        {
+          "elapsed_sec": 4.179996903985739e-05,
+          "cost": 43,
+          "iteration": 10
+        }
+      ]
+    },
+    {
+      "instance": "nn-over",
+      "solver": "bnb+nn",
+      "solution": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "cost": 43,
+      "feasible": true,
+      "elapsed_sec": 5.069997860118747e-05,
+      "stats": {
+        "nodes": 13,
+        "pruned": 1,
+        "route_prunes": 0,
+        "leaves": 1,
+        "initial_upper_bound": null,
+        "nn_seed": false
+      },
+      "history": [
+        {
+          "elapsed_sec": 3.309996100142598e-05,
+          "cost": 43,
+          "iteration": 10
+        }
+      ]
+    }
+  ]
+}

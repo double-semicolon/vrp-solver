@@ -1,0 +1,205 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "toy5",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 30,
+    "num_vehicles": 2
+  },
+  "results": [
+    {
+      "instance": "toy5",
+      "solver": "feasible",
+      "solution": [
+        [
+          1,
+          2,
+          5
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 272,
+      "feasible": true,
+      "elapsed_sec": 0.0,
+      "stats": {},
+      "history": []
+    },
+    {
+      "instance": "toy5",
+      "solver": "capacity-over",
+      "solution": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "cost": 221,
+      "feasible": false,
+      "elapsed_sec": 0.0,
+      "stats": {},
+      "history": []
+    },
+    {
+      "instance": "toy5",
+      "solver": "too-many-vehicles",
+      "solution": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          5
+        ]
+      ],
+      "cost": 304,
+      "feasible": false,
+      "elapsed_sec": 0.0,
+      "stats": {},
+      "history": []
+    },
+    {
+      "instance": "toy5",
+      "solver": "duplicate-and-missing",
+      "solution": [
+        [
+          1,
+          1,
+          2
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 216,
+      "feasible": false,
+      "elapsed_sec": 0.0,
+      "stats": {},
+      "history": []
+    },
+    {
+      "instance": "toy5",
+      "solver": "depot-in-route",
+      "solution": [
+        [
+          1,
+          2,
+          5,
+          0
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 272,
+      "feasible": false,
+      "elapsed_sec": 0.0,
+      "stats": {},
+      "history": []
+    },
+    {
+      "instance": "toy5",
+      "solver": "empty-route-is-a-vehicle",
+      "solution": [
+        [
+          1,
+          2,
+          5
+        ],
+        [],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 272,
+      "feasible": false,
+      "elapsed_sec": 0.0,
+      "stats": {},
+      "history": []
+    },
+    {
+      "instance": "toy5",
+      "solver": "stats-of-every-type",
+      "solution": [
+        [
+          1,
+          2,
+          5
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 0,
+      "feasible": false,
+      "elapsed_sec": 1e-07,
+      "stats": {
+        "int": 12,
+        "float": 0.1,
+        "true": true,
+        "null": null,
+        "text": "日本語"
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.0,
+          "cost": 100,
+          "iteration": 0
+        },
+        {
+          "elapsed_sec": 2.5e-05,
+          "cost": 90,
+          "iteration": null
+        }
+      ]
+    }
+  ]
+}

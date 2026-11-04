@@ -1,0 +1,94 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "java-golden",
+    "coords": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.1,
+        0.2
+      ],
+      [
+        0.3333333333333333,
+        0.6666666666666666
+      ],
+      [
+        1.0E-7,
+        12345.678
+      ],
+      [
+        -3.0,
+        4.0
+      ]
+    ],
+    "demands": [
+      0,
+      2,
+      3,
+      4,
+      5
+    ],
+    "capacity": 9,
+    "num_vehicles": null
+  },
+  "results": [
+    {
+      "instance": "java-golden",
+      "solver": "feasible",
+      "solution": [
+        [
+          1,
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ]
+      ],
+      "cost": 24704,
+      "feasible": true,
+      "elapsed_sec": 1.0E-7,
+      "stats": {
+        "nodes": 12,
+        "ratio": 0.1,
+        "seeded": true,
+        "bound": null,
+        "note": "日本語"
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.0,
+          "cost": 40,
+          "iteration": 0
+        },
+        {
+          "elapsed_sec": 2.5E-5,
+          "cost": 24704,
+          "iteration": null
+        }
+      ]
+    },
+    {
+      "instance": "java-golden",
+      "solver": "infeasible",
+      "solution": [
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      "cost": 24693,
+      "feasible": false,
+      "elapsed_sec": 0.5,
+      "stats": { },
+      "history": [ ]
+    }
+  ]
+}

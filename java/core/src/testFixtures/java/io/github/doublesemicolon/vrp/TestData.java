@@ -4,7 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /** 言語共通のテストデータ (リポジトリ直下の testdata/) の場所。 */
-final class TestData {
+public final class TestData {
     private TestData() {}
 
     /**
@@ -14,7 +14,7 @@ final class TestData {
      * Gradle から実行したときで作業ディレクトリが違うため。見つからなければ、
      * 黙ってテストを飛ばさずに失敗させる。
      */
-    static Path root() {
+    public static Path root() {
         String p = System.getProperty("vrp.testdata");
         if (p == null) {
             throw new IllegalStateException("システムプロパティ vrp.testdata が無い (Gradle から実行する)");
@@ -26,7 +26,18 @@ final class TestData {
         return root;
     }
 
-    static Path cases() {
+    /** 小さいインスタンスと全探索の期待値 (vrp-case/1)。 */
+    public static Path cases() {
         return root().resolve("cases");
+    }
+
+    /** Python と Java がそれぞれ書いた結果ファイル (vrp-run/1)。 */
+    public static Path runs() {
+        return root().resolve("runs");
+    }
+
+    /** Python で計算した距離行列。Java の計算と突き合わせる。 */
+    public static Path distances() {
+        return root().resolve("distances");
     }
 }

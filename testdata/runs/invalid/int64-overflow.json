@@ -1,0 +1,72 @@
+{
+  "format": "vrp-run/1",
+  "instance": {
+    "name": "toy5",
+    "coords": [
+      [
+        50,
+        50
+      ],
+      [
+        20,
+        30
+      ],
+      [
+        25,
+        70
+      ],
+      [
+        75,
+        65
+      ],
+      [
+        80,
+        25
+      ],
+      [
+        55,
+        20
+      ]
+    ],
+    "demands": [
+      0,
+      12,
+      9,
+      14,
+      11,
+      7
+    ],
+    "capacity": 30,
+    "num_vehicles": 2
+  },
+  "results": [
+    {
+      "instance": "toy5",
+      "solver": "base",
+      "solution": [
+        [
+          1,
+          2,
+          5
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "cost": 9223372036854775808,
+      "feasible": true,
+      "elapsed_sec": 0.5,
+      "stats": {
+        "nodes": 3
+      },
+      "history": [
+        {
+          "elapsed_sec": 0.25,
+          "cost": 100,
+          "iteration": 1
+        }
+      ]
+    }
+  ]
+}

@@ -16,6 +16,12 @@ subprojects {
         }
     }
 
+    dependencies {
+        "testImplementation"(platform("org.junit:junit-bom:6.1.3"))
+        "testImplementation"("org.junit.jupiter:junit-jupiter")
+        "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
+    }
+
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = "UTF-8"   // Windows の既定 (MS932) で日本語のコメントが化けないように
         options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))   // 警告はエラーとして扱う

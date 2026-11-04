@@ -18,14 +18,23 @@ Solution = list[Route]
 
 
 def build_distance_matrix(coords: list[tuple[float, float]]) -> list[list[int]]:
-    """EUC_2D: ユークリッド距離を四捨五入して整数化する。CVRPLib の規約に合わせる。"""
+    """
+    EUC_2D: ユークリッド距離を四捨五入して整数化する。CVRPLib の規約に合わせる。
+
+    Java 版 (Instance.java) と同じ値になるよう、式の形まで揃えてある:
+      - 2乗は ** ではなく掛け算。** は C の pow で、正しく丸める保証が無く
+        Windows では x*x と 0.2% ほど食い違う。掛け算は IEEE 754 で決まる
+      - 丸めは int(d + 0.5)。Java では Math.round ではなくこの形で書く
+        (0.49999999999999994 で両者は 1 と 0 に分かれる)
+    """
     m = len(coords)
     D = [[0] * m for _ in range(m)]
     for i in range(m):
         xi, yi = coords[i]
         for j in range(i + 1, m):
             xj, yj = coords[j]
-            d = int(math.sqrt((xi - xj) ** 2 + (yi - yj) ** 2) + 0.5)
+            dx, dy = xi - xj, yi - yj
+            d = int(math.sqrt(dx * dx + dy * dy) + 0.5)
             D[i][j] = D[j][i] = d
     return D
 
