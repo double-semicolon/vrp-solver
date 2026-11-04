@@ -14,6 +14,7 @@ test_testdata_files.py が、今のコードで作り直した内容とファイ
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -22,7 +23,7 @@ from conftest import CASES, TESTDATA
 from vrp.instances import TOY5, random_instance
 from vrp.model import Instance
 from vrp.result import Improvement, SolveResult
-from vrp.serialize import save_run
+from vrp.serialize import load_run, save_run
 from vrp.solvers import SOLVERS
 
 RUNS_DIR = TESTDATA / "runs" / "python"
@@ -37,12 +38,38 @@ HEURISTICS = ["nn", "nn+2opt"]
 #   toy5-unlimited  num_vehicles が null
 #   nn-over         最近傍法と 2-opt が実行不可能な解を返す
 #   rand30-*        小数の座標。距離の丸めが整数座標の toy より厳しく試される
+def _stored_random(n: int, seed: int, layout: str) -> Instance:
+    """
+    ランダムインスタンスは、最初に作ったときの座標をファイルに残し、以後はそれを正とする。
+
+    clustered は random.gauss (中で libm の log・cos を使う) で座標を作るので、OS によって
+    末尾の桁が変わる。実際に Windows と Linux (CI) で座標が 1 ulp 違った。作り直すたびに
+    座標が変わると、Java と突き合わせる基準が OS ごとに揺れる。
+    同じインスタンスであること (末尾の桁以外) だけは、ここで確かめる。
+    """
+    inst = random_instance(n, seed=seed, layout=layout)
+    path = RUNS_DIR / f"{inst.name}.json"
+    if not path.exists():
+        return inst
+    stored, _ = load_run(path)
+    same = (
+        (stored.name, stored.demands, stored.capacity, stored.num_vehicles)
+        == (inst.name, inst.demands, inst.capacity, inst.num_vehicles)
+        and len(stored.coords) == len(inst.coords)
+        and all(math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-12)
+                for p, q in zip(stored.coords, inst.coords) for a, b in zip(p, q))
+    )
+    if not same:
+        raise ValueError(f"{path.name} の座標が random_instance の出力と違う (生成器を変えたなら消して作り直す)")
+    return stored
+
+
 RUN_SPECS: list[tuple[Instance, list[str]]] = [
     (CASES["toy8"].inst, ALL),
     (CASES["toy5-unlimited"].inst, ALL),
     (CASES["nn-over"].inst, ALL),
-    (random_instance(30, seed=0, layout="uniform"), HEURISTICS),
-    (random_instance(30, seed=1, layout="clustered"), HEURISTICS),
+    (_stored_random(30, seed=0, layout="uniform"), HEURISTICS),
+    (_stored_random(30, seed=1, layout="clustered"), HEURISTICS),
 ]
 
 
