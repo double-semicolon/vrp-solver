@@ -15,7 +15,7 @@ jobs:
         working-directory: python
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3   # v8 以降はメジャー番号だけのタグ (v10) が無い
       # --locked: uv.lock と pyproject.toml が食い違っていたら失敗させる (黙って解決し直さない)
       - run: uv sync --locked
       - run: uv run pytest
