@@ -4,29 +4,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.doublesemicolon.vrp.Instance;
-import io.github.doublesemicolon.vrp.Objective;
 import io.github.doublesemicolon.vrp.Solution;
-import io.github.doublesemicolon.vrp.TestData;
-import io.github.doublesemicolon.vrp.json.Cases;
-import io.github.doublesemicolon.vrp.json.VrpJson;
-import io.github.doublesemicolon.vrp.solvers.BruteForce;
-import io.github.doublesemicolon.vrp.solvers.NearestNeighbor;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
-class RelocateTest {
+/** relocate のテスト。全近傍に共通のテストは {@link NeighborhoodTestBase}。 */
+class RelocateTest extends NeighborhoodTestBase {
     static final Relocate RELOCATE = new Relocate();
 
+    @Override
+    Neighborhood neighborhood() {
+        return RELOCATE;
+    }
+
+    @Override
+    List<Solution> naive(Instance inst, Solution sol) {
+        return naiveRelocate(sol);
+    }
+
     /** relocate の定義そのまま: 顧客を 1 人抜き (空になったルートは消す)、あらゆる位置か新しいルートに入れる。 */
-    static List<Solution> naive(Instance inst, Solution sol) {
+    static List<Solution> naiveRelocate(Solution sol) {
         List<Solution> out = new ArrayList<>();
         List<List<Integer>> base = NeighborhoodContract.mutable(sol);
         for (int r = 0; r < base.size(); r++) {
@@ -47,69 +46,6 @@ class RelocateTest {
             }
         }
         return out;
-    }
-
-    static Instance stored(String name) {
-        try {
-            return VrpJson.readRun(TestData.runs().resolve("python/" + name + ".json")).instance();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    // ---------------------------------------------------------------- 約束 (共通テスト)
-
-    // 車両数の上限がちょうどのもの (toy5 は K=2)、余裕のあるもの (toy8-K4)、上限なし、容量がきついもの
-    @ParameterizedTest
-    @ValueSource(strings = {"toy5", "toy5-K3", "toy5-tight", "toy5-unlimited", "nn-over", "toy8-tight", "toy8"})
-    void contractHoldsFromEveryFeasibleSolution(String name) {
-        // 全探索で列挙できる実行可能解の全てを出発点にする
-        Instance inst = Cases.get(name).instance();
-        long n = BruteForce.enumerate(inst, sol -> NeighborhoodContract.check(inst, sol, RELOCATE, RelocateTest::naive));
-        assertTrue(n > 0);
-    }
-
-    static Stream<String> randomInstances() {
-        return Stream.of("rand30-uniform-s0", "rand30-clustered-s1", "rand50-uniform-s0", "rand50-clustered-s2");
-    }
-
-    @ParameterizedTest
-    @MethodSource("randomInstances")
-    void contractHoldsAlongTheDescent(String name) {
-        // 最近傍法の解から局所最適まで、途中の全ての解で確かめる
-        Instance inst = stored(name);
-        Routes s = Routes.of(inst, NearestNeighbor.build(inst));
-        NeighborhoodContract.check(inst, s.toSolution(), RELOCATE, RelocateTest::naive);
-        LocalSearch.descend(s, RELOCATE, cost ->
-                NeighborhoodContract.check(inst, s.toSolution(), RELOCATE, RelocateTest::naive));
-    }
-
-    @Test
-    void contractHoldsOnA200CustomerInstance() {
-        Instance inst = stored("rand200-clustered-s1");
-        NeighborhoodContract.check(inst, NearestNeighbor.build(inst), RELOCATE, RelocateTest::naive);
-    }
-
-    // ---------------------------------------------------------------- 局所探索
-
-    @ParameterizedTest
-    @MethodSource("randomInstances")
-    void descentEndsAtALocalOptimumAndOnlyImproves(String name) {
-        Instance inst = stored(name);
-        Solution start = NearestNeighbor.build(inst);
-        Routes s = Routes.of(inst, start);
-        List<Long> costs = new ArrayList<>(List.of(s.cost()));
-        long moves = LocalSearch.descend(s, RELOCATE, costs::add);
-
-        assertEquals(moves, costs.size() - 1);
-        for (int k = 1; k < costs.size(); k++) {
-            assertTrue(costs.get(k) < costs.get(k - 1), "改善しない手を適用した");
-        }
-        Solution end = s.toSolution();
-        assertEquals(List.of(), Objective.validate(inst, end));
-        assertEquals(Objective.solutionCost(inst, end), s.cost());
-        assertTrue(moves > 0 && s.cost() < Objective.solutionCost(inst, start), "最近傍法の解を改善できる");
-        NeighborhoodContract.assertLocalOptimum(inst, end, RelocateTest::naive);
     }
 
     // ---------------------------------------------------------------- 個別の場面
