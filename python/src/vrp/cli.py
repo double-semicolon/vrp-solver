@@ -8,6 +8,7 @@
   vrp bench   -n 50 --seeds 20                  多数のシードで改善幅の平均を取る
   vrp fetch-x                                   CVRPLib の X set を data/cvrplib/X に取得する
   vrp bench-x --max-n 300 --save                X set で BKS との gap を測る
+  vrp check-bench a.json b.json                 2 つのベンチマーク結果 (Python 版と Java 版など) を突き合わせる
   vrp plot    results/xxx.json                  保存済みの結果から作図し直す
 
 matplotlib は作図するときにだけ import する。入っていない環境でも
@@ -23,7 +24,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
-from .benchmark import load_cases, run_benchmark, save_bench, summarize
+from .benchmark import compare_benches, load_bench, load_cases, run_benchmark, save_bench, summarize
 from .instances import TOYS, random_instance
 from .model import Instance, Solution
 from .objective import route_cost, route_load, solution_cost, validate
@@ -282,6 +283,46 @@ def cmd_bench_x(args: argparse.Namespace) -> None:
         print(f"  保存: {save_bench(path, rows)}")
 
 
+def cmd_check_bench(args: argparse.Namespace) -> None:
+    """
+    2 つのベンチマーク結果 (vrp-bench/1) の解が一致するかを確かめ、時間を並べる。
+
+    Step 3 の完了判定に使う (左に Python 版、右に Java 版の結果を渡す)。
+    食い違えば終了コード 1 にする。時間は比べるだけで、一致の判定には使わない。
+    """
+    left, right = load_bench(args.left), load_bench(args.right)
+    print(f"左: {args.left} ({len(left)} インスタンス)")
+    print(f"右: {args.right} ({len(right)} インスタンス)")
+
+    by_name = {r.instance: r for r in right}
+    common = [(lr, by_name[lr.instance]) for lr in left if lr.instance in by_name]
+    solvers = [res.solver for res in left[0].results] if left else []
+    widths = [12, 13, 13]
+    print("時間 (両方にあるインスタンスの合計)")
+    print("  " + "".join(_pad(h, w) for h, w in zip(["ソルバ", "左", "右"], widths)) + "右 / 左")
+    for name in solvers:
+        pairs = [(next((x for x in lr.results if x.solver == name), None),
+                  next((x for x in rr.results if x.solver == name), None)) for lr, rr in common]
+        pairs = [(a, b) for a, b in pairs if a is not None and b is not None]
+        if not pairs:
+            continue
+        ta = sum(a.elapsed_sec for a, _ in pairs)
+        tb = sum(b.elapsed_sec for _, b in pairs)
+        ratio = f"{tb / ta:.2f} 倍" if ta > 0 else "-"
+        cells = [name, f"{ta:.2f} 秒", f"{tb:.2f} 秒"]
+        print("  " + "".join(_pad(c, w) for c, w in zip(cells, widths)) + ratio)
+
+    diffs = compare_benches(left, right)
+    n_results = sum(len(r.results) for r in left)
+    if not diffs:
+        print(f"一致: {len(left)} インスタンス、{n_results} 件の結果で、経過時間以外が全て同じ")
+        return
+    print(f"食い違い: {len(diffs)} 件")
+    for d in diffs:
+        print(f"  {d}")
+    raise SystemExit(1)
+
+
 def cmd_plot(args: argparse.Namespace) -> None:
     """保存済みの結果から作図し直す。重い探索をやり直さずに図だけ差し替えられる。"""
     from . import viz
@@ -347,6 +388,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="大きすぎるインスタンスでも厳密解法を走らせる")
     add_output_args(sp)
 
+    sp = sub.add_parser("check-bench", help="2 つのベンチマーク結果の解が一致するか確かめる")
+    sp.add_argument("left", help="bench-x の結果 (例: Python 版)")
+    sp.add_argument("right", help="bench-x の結果 (例: Java 版)")
+
     sp = sub.add_parser("plot", help="保存済みの JSON から作図し直す")
     sp.add_argument("run", help="save_run が書いた JSON")
     sp.add_argument("--out", help="出力先 PNG (既定: 入力と同じ場所)")
@@ -365,7 +410,7 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     handlers = {"demo": cmd_demo, "solve": cmd_solve, "compare": cmd_compare,
                 "bench": cmd_bench, "fetch-x": cmd_fetch_x, "bench-x": cmd_bench_x,
-                "plot": cmd_plot}
+                "check-bench": cmd_check_bench, "plot": cmd_plot}
     handlers[args.command or "demo"](args)
 
 

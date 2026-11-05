@@ -27,7 +27,8 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * 結果ファイル (vrp-run/1) の読み書き (Python 版の serialize.py)。
+ * 結果ファイル (vrp-run/1) とベンチマーク結果 (vrp-bench/1) の読み書き
+ * (Python 版の serialize.py と benchmark.py の save_bench / load_bench)。
  *
  * <p>Python 版と同じ規則で厳格に読む。片方だけ緩いと「Python では読めるが Java では
  * 読めないファイル」ができ、突き合わせの意味が無くなる (規則は testdata/README.md)。
@@ -44,12 +45,24 @@ import tools.jackson.databind.node.ObjectNode;
 public final class VrpJson {
     /** 形式を変えたらここを上げる。Python 版の serialize.FORMAT と揃える印。 */
     public static final String RUN_FORMAT = "vrp-run/1";
+    /** Python 版の benchmark.FORMAT と揃える。 */
+    public static final String BENCH_FORMAT = "vrp-bench/1";
 
     private VrpJson() {}
 
     /** 1つのファイルに入っている、1インスタンスとそこで走らせた結果の一式。 */
     public record Run(Instance instance, List<SolveResult> results) {
         public Run {
+            results = List.copyOf(results);
+        }
+    }
+
+    /**
+     * ベンチマークの 1 インスタンス分。bks は採点し直した既知最良解のコスト。
+     * gap は cost と bks から決まるので持たない (保存すると食い違った gap を作れてしまう)。
+     */
+    public record BenchRow(String instance, int n, long bks, List<SolveResult> results) {
+        public BenchRow {
             results = List.copyOf(results);
         }
     }
@@ -81,10 +94,7 @@ public final class VrpJson {
 
     public static Run parseRun(String text) {
         JsonNode root = parse(text);
-        JsonNode format = root.isObject() ? root.get("format") : null;
-        if (format == null || !format.isString() || !format.stringValue().equals(RUN_FORMAT)) {
-            throw new IllegalArgumentException("未知の形式: " + format + " (期待: " + RUN_FORMAT + ")");
-        }
+        format(root, RUN_FORMAT);
         keys(root, "run", "format", "instance", "results");
         Instance inst = instanceFrom(root.get("instance"), "instance");
         List<SolveResult> results = new ArrayList<>();
@@ -93,6 +103,43 @@ public final class VrpJson {
             results.add(resultFrom(rs.get(i), "results[" + i + "]"));
         }
         return new Run(inst, results);
+    }
+
+    public static List<BenchRow> readBench(Path path) throws IOException {
+        String text = Files.readString(path, StandardCharsets.UTF_8);
+        try {
+            return parseBench(text);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(path.getFileName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    public static List<BenchRow> parseBench(String text) {
+        JsonNode root = parse(text);
+        format(root, BENCH_FORMAT);
+        keys(root, "bench", "format", "rows");
+        List<BenchRow> rows = new ArrayList<>();
+        JsonNode rs = array(root.get("rows"), "rows");
+        for (int i = 0; i < rs.size(); i++) {
+            String at = "rows[" + i + "]";
+            JsonNode r = rs.get(i);
+            keys(r, at, "instance", "n", "bks", "results");
+            List<SolveResult> results = new ArrayList<>();
+            JsonNode res = array(r.get("results"), at + ".results");
+            for (int k = 0; k < res.size(); k++) {
+                results.add(resultFrom(res.get(k), at + ".results[" + k + "]"));
+            }
+            rows.add(new BenchRow(str(r.get("instance"), at + ".instance"), int32(r.get("n"), at + ".n"),
+                    int64(r.get("bks"), at + ".bks"), results));
+        }
+        return rows;
+    }
+
+    private static void format(JsonNode root, String expected) {
+        JsonNode format = root.isObject() ? root.get("format") : null;
+        if (format == null || !format.isString() || !format.stringValue().equals(expected)) {
+            throw new IllegalArgumentException("未知の形式: " + format + " (期待: " + expected + ")");
+        }
     }
 
     /** 厳格に JSON を読む。パッケージの外に Jackson の型を出さないため package-private。 */
@@ -186,7 +233,10 @@ public final class VrpJson {
 
     /** 書き始めてから失敗すると壊れたファイルが残るので、先に文字列にしてから書く。 */
     public static Path writeRun(Path path, Instance inst, List<SolveResult> results) throws IOException {
-        String text = runToString(inst, results);
+        return write(path, runToString(inst, results));
+    }
+
+    private static Path write(Path path, String text) throws IOException {
         Path parent = path.toAbsolutePath().getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -203,6 +253,32 @@ public final class VrpJson {
         for (int i = 0; i < results.size(); i++) {
             rs.add(resultNode(results.get(i), "results[" + i + "]"));
         }
+        return pretty(root);
+    }
+
+    public static Path writeBench(Path path, List<BenchRow> rows) throws IOException {
+        return write(path, benchToString(rows));
+    }
+
+    public static String benchToString(List<BenchRow> rows) {
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("format", BENCH_FORMAT);
+        ArrayNode rs = root.putArray("rows");
+        for (int i = 0; i < rows.size(); i++) {
+            BenchRow row = rows.get(i);
+            ObjectNode r = rs.addObject();
+            r.put("instance", row.instance());
+            r.put("n", row.n());
+            r.put("bks", row.bks());
+            ArrayNode res = r.putArray("results");
+            for (int k = 0; k < row.results().size(); k++) {
+                res.add(resultNode(row.results().get(k), "rows[" + i + "].results[" + k + "]"));
+            }
+        }
+        return pretty(root);
+    }
+
+    private static String pretty(ObjectNode root) {
         return MAPPER.writer().with(PRETTY).writeValueAsString(root) + "\n";
     }
 

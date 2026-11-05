@@ -9,7 +9,7 @@ cvrplib/        CVRPLib X set の小さいインスタンス 2 件と、その�
 cvrplib/parse/  ローダの対照 (valid.vrp / valid.sol) と、両言語が拒否する壊れたファイル (invalid/)
 distances/      座標と、Python で計算した距離行列 (vrp-dist/1)
 runs/python/    Python のソルバが書いた結果ファイル (vrp-run/1)
-runs/java/      Java が書いた結果ファイル (vrp-run/1)
+runs/java/      Java が書いた結果ファイル (vrp-run/1) とベンチマーク結果 (vrp-bench/1)
 runs/invalid/   両言語が拒否しなければならない結果ファイル。invalid.json は拒否の理由の表
 ```
 
@@ -45,6 +45,7 @@ CI では Python と Java が別々のジョブで走るので、ファイルを
 | `distances/*.json` | Python | 今の定義で計算し直すと同じ (`test_testdata_files.py`) | Java の計算と全要素が一致 (`DistanceMatrixTest`) |
 | `runs/python/*.json` | Python | 今のソルバで作り直すと同じ。経過時間は除く。2-opt の同点が 20 回以上起きていること | cost と feasible を計算し直すと一致 (`PythonWrittenRunsTest`)。Java のソルバで解き直すと、解・stats・改善の履歴まで一致 (`SameAsPythonTest`) |
 | `runs/java/golden.json` | Java | 今の書き出しと同じバイト列 (`GoldenRunTest`) | `load_run` で読め、Java で組み立てた値になる |
+| `runs/java/bench-x.json` | Java | `cvrplib/` の 2 件で今の `XBench` が書く内容と同じ。経過時間は除く (`XBenchTest`) | `load_bench` で読め、Python が同じ 2 件を走らせた結果と `compare_benches` で一致 |
 | `runs/invalid/*.json` | Python | 生成器の出力と同じ | 両言語とも、`invalid.json` の箇所を名指しして拒否 (`StrictReadingTest`) |
 | `cvrplib/parse/invalid/*` | Python | 生成器の出力と同じ | 両言語とも、`invalid.tsv` の理由を名指しして拒否 (`CvrplibTest`)。core のテストは JSON を読めないので表はタブ区切り |
 
@@ -52,15 +53,16 @@ CI では Python と Java が別々のジョブで走るので、ファイルを
 
 ```
 cd python && uv run python tests/make_testdata.py       distances/、runs/python/、runs/invalid/、cvrplib/parse/
-cd java && VRP_REGENERATE=1 ./gradlew test               runs/java/golden.json
+cd java && VRP_REGENERATE=1 ./gradlew test               runs/java/golden.json、runs/java/bench-x.json
 ```
 
-## vrp-run/1 を読むときの規則
+## vrp-run/1・vrp-bench/1 を読むときの規則
 
-Python (`serialize.py`) と Java (`VrpJson`) で同じにする。
+Python (`serialize.py`、`benchmark.py` の `load_bench`) と Java (`VrpJson`) で同じにする。
+vrp-bench/1 の行 (`rows[i]`) の欄は `instance`・`n`・`bks`・`results` で、`results` の 1 件は vrp-run/1 と同じ形。
 
 - `NaN`・`Infinity`、同じキーの重複、知らないキー、欠けたキーはエラー
-- 整数の欄は JSON の整数だけ (`3.7`、`3.0`、`true`、`"5"` は拒否)。`cost`・`iteration`・`stats` は
+- 整数の欄は JSON の整数だけ (`3.7`、`3.0`、`true`、`"5"` は拒否)。`cost`・`iteration`・`stats`・`bks` は
   64 bit、それ以外 (需要・容量・台数・顧客番号) は 32 bit に収まること
 - 小数の欄は整数も受け付ける (`[50, 50]` など)。有限でなければエラー (`1e400` は読むと無限大になる)
 - `null` を許すのは `num_vehicles` (上限なし)・`history` の `iteration`・`stats` の値だけ

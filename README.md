@@ -77,6 +77,42 @@ uv run vrp fetch-x                   python/data/cvrplib/X に 100 インスタ�
 uv run vrp bench-x --save            全インスタンスで nn / nn+2opt の gap を測り、results/ に JSON で保存
 ```
 
+### Step 3: Java 版と Python 版の突き合わせ
+
+X set 全 100 インスタンスで、最近傍法と最近傍法 + 2-opt を Python 版と Java 版の両方で走らせ、
+2 つの結果ファイルを `vrp check-bench` で突き合わせた。200 件の結果のすべてで、
+経過時間以外 (解そのもの、コスト、stats、改善の履歴) が一致した。gap も当然 Step 2 と同じになる。
+
+1 インスタンスあたりの平均時間 (同じマシンで続けて計測。Intel Core i7-7700、Python 3.12.14、Java 21.0.13):
+
+| 顧客数 | インスタンス | 最近傍法 Python | 最近傍法 Java | 速さの比 | + 2-opt Python | + 2-opt Java | 速さの比 |
+|---|---|---|---|---|---|---|---|
+| 100〜250 | 33 | 7.2 ms | 0.63 ms | 11 倍 | 8.4 ms | 0.96 ms | 9 倍 |
+| 251〜500 | 35 | 24.4 ms | 1.17 ms | 21 倍 | 30.5 ms | 1.58 ms | 19 倍 |
+| 501〜1000 | 32 | 99.8 ms | 3.28 ms | 30 倍 | 108.6 ms | 4.05 ms | 27 倍 |
+| 全体 | 100 | 42.9 ms | 1.67 ms | 26 倍 | 48.2 ms | 2.17 ms | 22 倍 |
+
+「+ 2-opt」の時間は、初期解を作る最近傍法の時間を含む。100 件の合計は、最近傍法 + 2-opt で
+Python 4.8 秒、Java 0.22 秒。
+
+Java は計測前のウォームアップ (空回し) をしていないので、最初の数件には JIT コンパイル
+(よく使う処理を実行中に機械語に変える仕組み) が済む前の時間が混ざる。最初の X-n101-k25 の
+最近傍法 + 2-opt は 3.9 ms で、同じ規模の後のインスタンス (0.7〜1.2 ms) の 3〜5 倍かかっている。
+顧客 100〜250 件の帯の比が小さいのは、この分も含む。全体の合計への影響は 2% 程度で、Java 版を
+3 回走らせても合計はほぼ変わらなかった。
+
+再現するコマンド (Step 2 の `fetch-x` で X set を取得してから):
+
+```
+cd python && uv run vrp bench-x --save          Python 版。python/results/ に保存
+cd java && ./gradlew :bench:run --args="--save"   Java 版。java/results/ に保存
+cd python && uv run vrp check-bench results/bench-x-nn_nn+2opt.json ../java/results/bench-x-nn_nn+2opt.json
+```
+
+X set はリポジトリに含めないので、CI では回せない。その代わり、testdata の 2 件で Java が書いた
+ベンチマーク結果を `testdata/runs/java/bench-x.json` に置き、Python のテストが同じ 2 件を走らせて
+突き合わせている。
+
 ## 使い方
 
 `python/` で実行する。作図には matplotlib が要る (`uv sync --extra viz`。開発用の環境には入っている)。
@@ -88,6 +124,7 @@ uv run vrp compare --instance toy8 --save            結果を results/ に JSON
 uv run vrp plot results/xxx.json                     保存した結果から作図し直す
 uv run vrp fetch-x                                   CVRPLib の X set を取得する
 uv run vrp bench-x --max-n 300                       X set (顧客 300 件以下) で BKS との gap を測る
+uv run vrp check-bench a.json b.json                 2 つのベンチマーク結果の解が一致するか確かめる
 uv run pytest                                        テスト
 ```
 
@@ -95,6 +132,7 @@ Java 版は `java/` で実行する。JDK 21 が要る (Gradle は wrapper が�
 
 ```
 ./gradlew test                                       テスト (Windows では gradlew.bat test)
+./gradlew :bench:run --args="--max-n 300"            X set (顧客 300 件以下) で BKS との gap を測る (Python 版の bench-x)
 ```
 
 push ごとに GitHub Actions で両方のテストが走る (`.github/workflows/ci.yml`)。

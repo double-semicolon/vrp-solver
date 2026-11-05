@@ -10,6 +10,9 @@ BKS のコストは .sol の Cost 行を信用せず、目的関数で採点し�
 
 保存する JSON には gap を書かない。cost と bks から一意に決まる値を保存すると、
 「両者と食い違った gap」という不正な状態を作れてしまう (serialize の D と同じ理由)。
+
+Java 版 (java/bench の XBench) も同じ形式で書く。読むときは serialize の load_run と同じ
+規則で厳格に読み、compare_benches で 2 つのファイルの解が一致するかを突き合わせる。
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ from .instances.cvrplib import load_sol, load_vrp
 from .model import Instance
 from .objective import solution_cost, validate
 from .result import SolveResult
-from .serialize import dumps, loads, result_from_dict, result_to_dict
+from .serialize import _int, _keys, _list, _str, dumps, loads, result_from_dict, result_to_dict
 from .solvers import SOLVERS
 
 FORMAT = "vrp-bench/1"
@@ -145,16 +148,88 @@ def save_bench(path: str | Path, rows: list[BenchRow]) -> Path:
     })
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(text, encoding="utf-8")
+    # 改行は OS によらず LF (save_run と同じ。Java 版の出力と揃える)
+    p.write_text(text, encoding="utf-8", newline="\n")
     return p
 
 
 def load_bench(path: str | Path) -> list[BenchRow]:
-    d = loads(Path(path).read_text(encoding="utf-8"))
-    if d.get("format") != FORMAT:
-        raise ValueError(f"未知の形式: {d.get('format')!r} (期待: {FORMAT!r})")
-    return [
-        BenchRow(r["instance"], int(r["n"]), int(r["bks"]),
-                 [result_from_dict(res) for res in r["results"]])
-        for r in d["rows"]
-    ]
+    """
+    load_run と同じ規則で厳格に読む (知らないキー・欠けたキー・"100" のような文字列の数はエラー)。
+    Java 版が書いたファイルを読む入口なので、ここが緩いと突き合わせの意味が薄れる。
+    """
+    path = Path(path)
+    try:
+        d = loads(path.read_text(encoding="utf-8"))
+        if not isinstance(d, dict) or d.get("format") != FORMAT:
+            got = d.get("format") if isinstance(d, dict) else d
+            raise ValueError(f"未知の形式: {got!r} (期待: {FORMAT!r})")
+        _keys(d, "bench", "format", "rows")
+        rows = []
+        for i, r in enumerate(_list(d["rows"], "rows")):
+            at = f"rows[{i}]"
+            _keys(r, at, "instance", "n", "bks", "results")
+            rows.append(BenchRow(
+                _str(r["instance"], f"{at}.instance"),
+                _int(r["n"], f"{at}.n"),
+                _int(r["bks"], f"{at}.bks", 64),
+                [result_from_dict(res, f"{at}.results[{k}]")
+                 for k, res in enumerate(_list(r["results"], f"{at}.results"))],
+            ))
+        return rows
+    except ValueError as e:   # json.JSONDecodeError も ValueError の派生
+        raise ValueError(f"{path.name}: {e}") from None
+
+
+# ---------------------------------------------------------------- 突き合わせ
+
+
+def compare_benches(left: list[BenchRow], right: list[BenchRow]) -> list[str]:
+    """
+    2 つのベンチマーク結果を、経過時間以外の全て (解・コスト・実行可能か・stats・
+    history のコストと反復回数) で突き合わせ、食い違いを 1 行ずつ返す。一致すれば空。
+
+    (インスタンス, ソルバ) ごとに最初の食い違いだけを出す。解が違えば、後のコストや
+    history も違って当然なので、並べても原因は分からない。最初に食い違うルートが手がかり。
+    """
+    out = []
+    by_name = {r.instance: r for r in right}
+    left_names = {r.instance for r in left}
+    out += [f"{r.instance}: 右にしか無い" for r in right if r.instance not in left_names]
+    for lr in left:
+        rr = by_name.get(lr.instance)
+        if rr is None:
+            out.append(f"{lr.instance}: 左にしか無い")
+            continue
+        if (lr.n, lr.bks) != (rr.n, rr.bks):
+            out.append(f"{lr.instance}: 顧客数と BKS: 左 {lr.n}, {lr.bks} / 右 {rr.n}, {rr.bks}")
+        right_solvers = {res.solver: res for res in rr.results}
+        left_solvers = {res.solver for res in lr.results}
+        out += [f"{lr.instance} / {res.solver}: 右にしか無い"
+                for res in rr.results if res.solver not in left_solvers]
+        for res in lr.results:
+            other = right_solvers.get(res.solver)
+            diff = "左にしか無い" if other is None else _first_difference(res, other)
+            if diff is not None:
+                out.append(f"{lr.instance} / {res.solver}: {diff}")
+    return out
+
+
+def _first_difference(a: SolveResult, b: SolveResult) -> str | None:
+    if a.solution != b.solution:
+        for k, (ra, rb) in enumerate(zip(a.solution, b.solution)):
+            if ra != rb:
+                return f"ルート {k} が違う: 左 {ra} / 右 {rb}"
+        return f"ルート数が違う: 左 {len(a.solution)} / 右 {len(b.solution)}"
+    for field in ("cost", "feasible", "stats"):
+        va, vb = getattr(a, field), getattr(b, field)
+        if va != vb:
+            return f"{field} が違う: 左 {va} / 右 {vb}"
+    ha = [(h.cost, h.iteration) for h in a.history]
+    hb = [(h.cost, h.iteration) for h in b.history]
+    if ha != hb:
+        for k, (x, y) in enumerate(zip(ha, hb)):
+            if x != y:
+                return f"history[{k}] (コスト, 反復回数) が違う: 左 {x} / 右 {y}"
+        return f"history の長さが違う: 左 {len(ha)} / 右 {len(hb)}"
+    return None

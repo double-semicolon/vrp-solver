@@ -6,6 +6,9 @@ Python → Java: runs/python と distances は Python が書いたもの。こ�
   古いファイルと突き合わせて通ってしまうことは無い。
 Java → Python: runs/java は Java が書いたもの (GoldenRunTest がバイト列を固定している)。
   ここで Python の load_run が読め、中身が Java 側で組み立てた値どおりであることを確かめる。
+  runs/java/bench-x.json は Java の XBench が testdata/cvrplib の 2 件で書いたベンチマーク結果
+  (XBenchTest が今の Java のコードの出力であることを確かめている)。ここで Python が同じ 2 件を
+  走らせた結果と突き合わせる。X set 全 100 件の突き合わせ (vrp check-bench) を CI で回す代わり。
 
 CI では2つの言語が別々のジョブで走るので、ファイルを介して両方向をつなぐ。
 """
@@ -15,6 +18,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from conftest import TESTDATA
 from make_testdata import (
     DIST_DIR,
     DIST_FORMAT,
@@ -31,6 +35,7 @@ from make_testdata import (
     without_time,
 )
 
+from vrp.benchmark import compare_benches, load_bench, load_cases, run_benchmark
 from vrp.model import build_distance_matrix
 from vrp.objective import is_feasible, solution_cost
 from vrp.serialize import load_run, loads
@@ -169,6 +174,20 @@ def test_java_written_run_uses_lf_and_strict_json():
     raw = JAVA_GOLDEN.read_bytes()
     assert b"\r" not in raw
     json.loads(raw, parse_constant=lambda c: pytest.fail(f"規格外の値 {c}"))
+
+
+JAVA_BENCH = RUNS_DIR.parent / "java" / "bench-x.json"
+
+
+def test_java_written_bench_matches_python_on_the_same_instances():
+    java = load_bench(JAVA_BENCH)
+    python = run_benchmark(load_cases(TESTDATA / "cvrplib"), ["nn", "nn+2opt"])
+    assert [r.instance for r in java] == ["X-n101-k25", "X-n106-k14"]
+    assert compare_benches(python, java) == []
+
+
+def test_java_written_bench_uses_lf():
+    assert b"\r" not in JAVA_BENCH.read_bytes()
 
 
 # ---------------------------------------------------------------- 厳格さ (両言語で同じファイル)
