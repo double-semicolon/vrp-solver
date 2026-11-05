@@ -29,6 +29,12 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        // 差分計算が壊れると、局所探索が「改善した」と思い込んで止まらなくなることがある。
+        // 落ちるべきテストが止まったままにならないよう、1 テストごとに打ち切る (Python 版の timeout と同じ)
+        systemProperty("junit.jupiter.execution.timeout.default", "60 s")
+        // 既定はテストが自分で終わってから時間超過を判定するので、無限ループは止められない。
+        // 別スレッドで走らせ、時間が来たら待たずに失敗にする
+        systemProperty("junit.jupiter.execution.timeout.thread.mode.default", "SEPARATE_THREAD")
         // 言語共通のテストデータ。テストはこのプロパティからパスを得る
         val testdata = rootDir.resolve("../testdata").canonicalFile
         systemProperty("vrp.testdata", testdata.path)
