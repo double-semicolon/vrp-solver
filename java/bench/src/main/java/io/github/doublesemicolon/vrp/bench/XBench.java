@@ -6,6 +6,7 @@ import io.github.doublesemicolon.vrp.SolveResult;
 import io.github.doublesemicolon.vrp.cvrplib.Cvrplib;
 import io.github.doublesemicolon.vrp.json.VrpJson;
 import io.github.doublesemicolon.vrp.json.VrpJson.BenchRow;
+import io.github.doublesemicolon.vrp.search.Vnd;
 import io.github.doublesemicolon.vrp.solvers.NearestNeighbor;
 import io.github.doublesemicolon.vrp.solvers.TwoOpt;
 import java.io.IOException;
@@ -48,6 +49,7 @@ public final class XBench {
     static {
         SOLVERS.put("nn", NearestNeighbor::solve);
         SOLVERS.put("nn+2opt", TwoOpt::solve);
+        SOLVERS.put("nn+vnd", Vnd::solve);
     }
 
     /** bks は .sol の記載ではなく、目的関数で採点し直したコスト。 */

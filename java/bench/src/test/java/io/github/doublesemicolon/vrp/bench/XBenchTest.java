@@ -57,6 +57,19 @@ class XBenchTest {
         }
     }
 
+    @Test
+    void vndIsOfferedAndNeverWorseThanNnTwoOpt() throws IOException {
+        assertEquals(List.of("nn", "nn+2opt", "nn+vnd"), XBench.parseArgs(new String[0]).solvers());
+        List<BenchRow> rows = XBench.run(XBench.loadCases(DATA, OptionalInt.empty()), List.of("nn+2opt", "nn+vnd"), r -> {});
+        for (BenchRow row : rows) {
+            SolveResult twoOpt = row.results().get(0);
+            SolveResult vnd = row.results().get(1);
+            assertTrue(vnd.feasible(), row.instance());
+            assertTrue(vnd.cost() < twoOpt.cost(), row.instance());
+            assertTrue(vnd.cost() > row.bks(), row.instance());
+        }
+    }
+
     // ---------------------------------------------------------------- 入力の不備
 
     static Path copyData(Path tmp) throws IOException {
@@ -108,7 +121,8 @@ class XBenchTest {
     @Test
     void savedFileIsNamedLikePythonsAndReadsBack(@TempDir Path tmp) throws IOException {
         XBench.Args a = XBench.parseArgs(new String[] {
-                "--dir", DATA.toString(), "--max-n", "200", "--save", "--out-dir", tmp.toString()});
+                "--dir", DATA.toString(), "--max-n", "200", "--solvers", "nn", "nn+2opt",
+                "--save", "--out-dir", tmp.toString()});
         assertEquals(tmp.resolve("bench-x-n200-nn_nn+2opt.json"), XBench.outPath(a));
 
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
