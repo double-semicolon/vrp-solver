@@ -20,9 +20,13 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -34,6 +38,7 @@ import java.util.stream.Stream;
  * <pre>
  *   ./gradlew :bench:run --args="--save"
  *   ./gradlew :bench:run --args="--max-n 300 --dir ../python/data/cvrplib/X"
+ *   ./gradlew :bench:run --args="--max-n 300 --solvers nn+alns-uniform nn+alns-adaptive --seeds 5"
  * </pre>
  */
 public final class XBench {
@@ -69,11 +74,67 @@ public final class XBench {
         }
     }
 
-    /** ALNS の反復回数 (#27 の仮の値。時間制限と複数シードは #29)。 */
+    /** ALNS の反復回数 (仮の値。時間制限は #29)。 */
     static final int ALNS_ITERATIONS = 1000;
 
+    /**
+     * 乱数のシードを取るソルバ。--solvers では名前の後に -s{シード} を付ける (付けなければシード 0)。
+     * --seeds N を付けると、ここにある名前を -s0 〜 -s{N-1} の N 個に広げる。
+     */
+    static final Map<String, BiFunction<Instance, Long, SolveResult>> SEEDED = new LinkedHashMap<>();
+
     static {
-        SOLVERS.put("nn+alns", inst -> Alns.solve(inst, Alns.Config.of(inst, 0, ALNS_ITERATIONS)));
+        SEEDED.put("nn+alns", (inst, seed) -> Alns.solve(inst, Alns.Config.of(inst, seed, ALNS_ITERATIONS)));
+        // 適応的な重みと VND の効果を分けて測るための組み合わせ (#28)。uniform は演算子を一様に選ぶ
+        for (boolean vnd : new boolean[] {false, true}) {
+            for (boolean adaptive : new boolean[] {false, true}) {
+                String name = "nn+alns-" + (adaptive ? "adaptive" : "uniform") + (vnd ? "-vnd" : "");
+                SEEDED.put(name, (inst, seed) -> Alns.solve(inst,
+                        Alns.Config.of(inst, seed, ALNS_ITERATIONS).withAdaptive(adaptive).withVnd(vnd), name));
+            }
+        }
+    }
+
+    private static final Pattern WITH_SEED = Pattern.compile("(.+)-s(0|[1-9][0-9]{0,8})");
+
+    /** 名前からソルバを引く。知らない名前なら空。結果のソルバ名は、シードを付けた名前 (付けなければ元の名前)。 */
+    static Optional<Function<Instance, SolveResult>> solver(String name) {
+        if (SOLVERS.containsKey(name)) {
+            return Optional.of(SOLVERS.get(name));
+        }
+        String base = name;
+        long seed = 0;
+        Matcher m = WITH_SEED.matcher(name);
+        if (!SEEDED.containsKey(name) && m.matches()) {
+            base = m.group(1);
+            seed = Long.parseLong(m.group(2));
+        }
+        BiFunction<Instance, Long, SolveResult> f = SEEDED.get(base);
+        if (f == null) {
+            return Optional.empty();
+        }
+        long s = seed;
+        return Optional.of(inst -> renamed(f.apply(inst, s), name));
+    }
+
+    private static SolveResult renamed(SolveResult r, String name) {
+        return new SolveResult(r.instance(), name, r.solution(), r.cost(), r.feasible(), r.elapsedSec(), r.stats(),
+                r.history());
+    }
+
+    /** --seeds で広げた後のソルバ名。seeds が 0 なら広げない。 */
+    static List<String> expand(List<String> names, int seeds) {
+        List<String> out = new ArrayList<>();
+        for (String name : names) {
+            if (seeds > 0 && SEEDED.containsKey(name)) {
+                for (int s = 0; s < seeds; s++) {
+                    out.add(name + "-s" + s);
+                }
+            } else {
+                out.add(name);
+            }
+        }
+        return out;
     }
 
     /** --solvers を付けないときに掛けるソルバ。 */
@@ -134,7 +195,7 @@ public final class XBench {
         for (Case c : cases) {
             List<SolveResult> results = new ArrayList<>();
             for (String name : solverNames) {
-                results.add(SOLVERS.get(name).apply(c.inst()));
+                results.add(solver(name).orElseThrow().apply(c.inst()));
             }
             BenchRow row = new BenchRow(c.inst().name(), c.inst().n(), c.bks(), results);
             rows.add(row);
@@ -145,12 +206,18 @@ public final class XBench {
 
     // ---------------------------------------------------------------- コマンド
 
-    record Args(Path dir, OptionalInt maxN, List<String> solvers, boolean save, Path outDir) {}
+    /** solvers は指定したとおりの名前。走らせるのは seeds で広げた {@link #solversToRun()}。 */
+    record Args(Path dir, OptionalInt maxN, List<String> solvers, int seeds, boolean save, Path outDir) {
+        List<String> solversToRun() {
+            return expand(solvers, seeds);
+        }
+    }
 
     static Args parseArgs(String[] argv) {
         Path dir = Path.of(X_DIR);
         OptionalInt maxN = OptionalInt.empty();
         List<String> solvers = DEFAULT_SOLVERS;
+        int seeds = 0;
         boolean save = false;
         Path outDir = Path.of("results");
         for (int i = 0; i < argv.length; i++) {
@@ -171,9 +238,10 @@ public final class XBench {
                         names.add(argv[++i]);
                     }
                     for (String name : names) {
-                        if (!SOLVERS.containsKey(name)) {
+                        if (solver(name).isEmpty()) {
                             throw new IllegalArgumentException("知らないソルバ: " + name + " (使えるのは "
-                                    + String.join(", ", SOLVERS.keySet()) + ")");
+                                    + String.join(", ", SOLVERS.keySet()) + "、シードを取る "
+                                    + String.join(", ", SEEDED.keySet()) + " (-s{シード} を付けられる))");
                         }
                     }
                     if (names.isEmpty()) {
@@ -181,12 +249,23 @@ public final class XBench {
                     }
                     solvers = List.copyOf(names);
                 }
+                case "--seeds" -> {
+                    String v = value(argv, ++i, a);
+                    try {
+                        seeds = Integer.parseInt(v);
+                    } catch (NumberFormatException e) {
+                        seeds = -1;
+                    }
+                    if (seeds < 1) {
+                        throw new IllegalArgumentException("--seeds は 1 以上の整数: " + v);
+                    }
+                }
                 case "--save" -> save = true;
                 case "--out-dir" -> outDir = Path.of(value(argv, ++i, a));
                 default -> throw new IllegalArgumentException("知らない引数: " + a);
             }
         }
-        return new Args(dir, maxN, solvers, save, outDir);
+        return new Args(dir, maxN, solvers, seeds, save, outDir);
     }
 
     private static String value(String[] argv, int i, String flag) {
@@ -196,10 +275,11 @@ public final class XBench {
         return argv[i];
     }
 
-    /** Python 版の保存先の名前 (bench-x{-n上限}-{ソルバ}.json) と揃える。 */
+    /** Python 版の保存先の名前 (bench-x{-n上限}-{ソルバ}.json) と揃える。--seeds を付けたら末尾に -seeds{N}。 */
     static Path outPath(Args a) {
         String limit = a.maxN().isPresent() ? "-n" + a.maxN().getAsInt() : "";
-        return a.outDir().resolve("bench-x" + limit + "-" + String.join("_", a.solvers()) + ".json");
+        String seeds = a.seeds() > 0 ? "-seeds" + a.seeds() : "";
+        return a.outDir().resolve("bench-x" + limit + "-" + String.join("_", a.solvers()) + seeds + ".json");
     }
 
     static void bench(Args a, PrintStream out) throws IOException {
@@ -210,18 +290,19 @@ public final class XBench {
         out.printf("%s: %d インスタンス (顧客 %d〜%d 件)%n", a.dir(), cases.size(),
                 cases.get(0).inst().n(), cases.get(cases.size() - 1).inst().n());
 
-        int[] widths = new int[3 + a.solvers().size()];
+        List<String> solvers = a.solversToRun();
+        int[] widths = new int[3 + solvers.size()];
         List<String> header = new ArrayList<>(List.of("インスタンス", "顧客", "BKS"));
         widths[0] = 16;
         widths[1] = 7;
         widths[2] = 9;
-        for (int k = 0; k < a.solvers().size(); k++) {
-            header.add(a.solvers().get(k) + " gap / 秒");
+        for (int k = 0; k < solvers.size(); k++) {
+            header.add(solvers.get(k) + " gap / 秒");
             widths[3 + k] = 20;
         }
         out.println("  " + row(header, widths));
 
-        List<BenchRow> rows = run(cases, a.solvers(), r -> {
+        List<BenchRow> rows = run(cases, solvers, r -> {
             List<String> cells = new ArrayList<>(List.of(r.instance(), String.valueOf(r.n()), String.valueOf(r.bks())));
             for (SolveResult res : r.results()) {
                 String gap = res.feasible() ? String.format("%+.2f%%", res.gapTo(r.bks())) : "実行不可能";
@@ -232,10 +313,10 @@ public final class XBench {
         });
 
         out.printf("集計 (%d インスタンス)%n", rows.size());
-        int nameWidth = a.solvers().stream().mapToInt(String::length).max().orElse(0) + 2;
+        int nameWidth = solvers.stream().mapToInt(String::length).max().orElse(0) + 2;
         int[] sw = {Math.max(12, nameWidth), 13, 13, 11, 11, 0};
         out.println("  " + row(List.of("ソルバ", "gap 平均", "gap 最大", "時間 平均", "時間 合計", "実行不可能"), sw));
-        for (int k = 0; k < a.solvers().size(); k++) {
+        for (int k = 0; k < solvers.size(); k++) {
             final int kk = k;
             // 実行不可能解は制約を破って安くなっている可能性があり、gap に混ぜると平均が良く見える
             List<Double> gaps = rows.stream().filter(r -> r.results().get(kk).feasible())
@@ -243,7 +324,7 @@ public final class XBench {
             double total = rows.stream().mapToDouble(r -> r.results().get(kk).elapsedSec()).sum();
             long infeasible = rows.size() - gaps.size();
             out.println("  " + row(List.of(
-                    a.solvers().get(k),
+                    solvers.get(k),
                     gaps.isEmpty() ? "-" : String.format("%+.2f%%", gaps.stream().mapToDouble(d -> d).average().orElseThrow()),
                     gaps.isEmpty() ? "-" : String.format("%+.2f%%", gaps.stream().mapToDouble(d -> d).max().orElseThrow()),
                     String.format("%.3f 秒", total / rows.size()),
@@ -251,8 +332,51 @@ public final class XBench {
                     String.valueOf(infeasible)), sw));
         }
 
+        if (a.seeds() > 1) {
+            printSeedSummary(a, rows, out);
+        }
         if (a.save()) {
             out.println("  保存: " + VrpJson.writeBench(outPath(a), rows));
+        }
+    }
+
+    /**
+     * シードを取るソルバを、シードをまとめて集計する。gap 平均は「シードごとの gap 平均」の平均で、
+     * 最小・最大はシードごとの gap 平均のばらつき。実行不可能な解は数を表示し、gap からは外す。
+     */
+    static void printSeedSummary(Args a, List<BenchRow> rows, PrintStream out) {
+        List<String> solvers = a.solversToRun();
+        List<String> bases = a.solvers().stream().filter(SEEDED::containsKey).toList();
+        out.printf("シードをまとめた集計 (%d シード)%n", a.seeds());
+        int nameWidth = bases.stream().mapToInt(String::length).max().orElse(0) + 2;
+        int[] sw = {Math.max(12, nameWidth), 13, 23, 11, 0};
+        out.println("  " + row(List.of("ソルバ", "gap 平均", "シード間 (最小〜最大)", "時間 平均", "実行不可能"), sw));
+        for (String base : bases) {
+            List<Double> means = new ArrayList<>();
+            double time = 0;
+            long infeasible = 0;
+            for (int s = 0; s < a.seeds(); s++) {
+                int k = solvers.indexOf(base + "-s" + s);
+                List<Double> gaps = new ArrayList<>();
+                for (BenchRow r : rows) {
+                    SolveResult res = r.results().get(k);
+                    time += res.elapsedSec();
+                    if (res.feasible()) {
+                        gaps.add(res.gapTo(r.bks()));
+                    } else {
+                        infeasible++;
+                    }
+                }
+                gaps.stream().mapToDouble(d -> d).average().ifPresent(means::add);
+            }
+            out.println("  " + row(List.of(
+                    base,
+                    means.isEmpty() ? "-" : String.format("%+.2f%%", means.stream().mapToDouble(d -> d).average().orElseThrow()),
+                    means.isEmpty() ? "-" : String.format("%+.2f%% 〜 %+.2f%%",
+                            means.stream().mapToDouble(d -> d).min().orElseThrow(),
+                            means.stream().mapToDouble(d -> d).max().orElseThrow()),
+                    String.format("%.3f 秒", time / (rows.size() * a.seeds())),
+                    String.valueOf(infeasible)), sw));
         }
     }
 

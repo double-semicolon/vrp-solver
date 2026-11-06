@@ -175,7 +175,59 @@ class XBenchTest {
     void speedupCombinationsAreNamedAfterTheirSettings() {
         assertTrue(XBench.SOLVERS.keySet().containsAll(List.of(
                 "nn+vnd-dlb", "nn+vnd-k5", "nn+vnd-k40", "nn+vnd-k10-dlb", "nn+vnd-k20-dlb")));
-        assertEquals(3 + 9 + 1, XBench.SOLVERS.size());
+        assertEquals(3 + 9, XBench.SOLVERS.size());
+    }
+
+    // ---------------------------------------------------------------- シードを取るソルバ (#28)
+
+    @Test
+    void seededSolversTakeTheSeedFromTheirName() throws IOException {
+        var inst = XBench.loadCases(DATA, OptionalInt.empty()).get(0).inst();
+        SolveResult s3 = XBench.solver("nn+alns-uniform-s3").orElseThrow().apply(inst);
+        assertEquals("nn+alns-uniform-s3", s3.solver());
+        assertEquals(3L, s3.stats().get("seed"));
+        assertEquals(false, s3.stats().get("adaptive"));
+        assertEquals(false, s3.stats().get("vnd"));
+        SolveResult direct = io.github.doublesemicolon.vrp.alns.Alns.solve(inst,
+                io.github.doublesemicolon.vrp.alns.Alns.Config.of(inst, 3, XBench.ALNS_ITERATIONS).withAdaptive(false).withVnd(false));
+        assertEquals(direct.solution(), s3.solution());
+        // 付けなければシード 0
+        assertEquals(0L, XBench.solver("nn+alns-adaptive-vnd").orElseThrow().apply(inst).stats().get("seed"));
+
+        for (String bad : List.of("nn+alns-s", "nn+alns-s01", "nn+alns-s-1", "nn-s0", "nn+alns-uniform-x-s0")) {
+            assertTrue(XBench.solver(bad).isEmpty(), bad);
+        }
+    }
+
+    @Test
+    void seedsExpandOnlyTheSeededSolvers() {
+        XBench.Args a = XBench.parseArgs(new String[] {"--solvers", "nn", "nn+alns-uniform", "--seeds", "3"});
+        assertEquals(List.of("nn", "nn+alns-uniform-s0", "nn+alns-uniform-s1", "nn+alns-uniform-s2"), a.solversToRun());
+        assertEquals(Path.of("results", "bench-x-nn_nn+alns-uniform-seeds3.json"), XBench.outPath(a));
+        assertEquals(List.of("nn", "nn+alns-s7"), XBench.parseArgs(new String[] {"--solvers", "nn", "nn+alns-s7"}).solversToRun());
+        for (String bad : List.of("0", "-1", "x")) {
+            assertThrows(IllegalArgumentException.class, () -> XBench.parseArgs(new String[] {"--seeds", bad}), bad);
+        }
+    }
+
+    @Test
+    void seedSummaryAveragesTheSeeds() throws IOException {
+        XBench.Args a = XBench.parseArgs(new String[] {
+                "--dir", DATA.toString(), "--solvers", "nn+alns-uniform", "--seeds", "2"});
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        XBench.bench(a, new PrintStream(buf, true, StandardCharsets.UTF_8));
+        String out = buf.toString(StandardCharsets.UTF_8);
+
+        List<BenchRow> rows = XBench.run(XBench.loadCases(DATA, OptionalInt.empty()), a.solversToRun(), r -> {});
+        double[] means = new double[2];
+        for (int s = 0; s < 2; s++) {
+            final int k = s;
+            means[s] = rows.stream().mapToDouble(r -> r.results().get(k).gapTo(r.bks())).average().orElseThrow();
+        }
+        String line = out.lines().dropWhile(l -> !l.startsWith("シードをまとめた集計")).filter(l -> l.contains("nn+alns-uniform"))
+                .findFirst().orElseThrow(() -> new AssertionError(out));
+        assertTrue(line.contains(String.format("%+.2f%%", (means[0] + means[1]) / 2)), line);
+        assertTrue(line.contains(String.format("%+.2f%% 〜 %+.2f%%", Math.min(means[0], means[1]), Math.max(means[0], means[1]))), line);
     }
 
     @Test

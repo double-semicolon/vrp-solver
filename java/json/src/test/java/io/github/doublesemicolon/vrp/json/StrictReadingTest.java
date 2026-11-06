@@ -37,8 +37,8 @@ class StrictReadingTest {
         try (Stream<Path> s = Files.list(TestData.runs().resolve("invalid"))) {
             files = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
         }
-        if (files.size() != 25) {
-            throw new IllegalStateException("invalid のファイル数が 25 でない: " + files.size());
+        if (files.size() != 30) {
+            throw new IllegalStateException("invalid のファイル数が 30 でない: " + files.size());
         }
         return files.stream();
     }

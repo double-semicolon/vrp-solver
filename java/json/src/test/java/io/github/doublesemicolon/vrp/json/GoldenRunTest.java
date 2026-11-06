@@ -45,6 +45,10 @@ class GoldenRunTest {
         stats.put("seeded", true);
         stats.put("bound", null);
         stats.put("note", "日本語");
+        // 数の配列: 整数だけ、小数を含む (整数として渡した 1 も小数に揃う)、空
+        stats.put("counts", List.of(3L, 0L, -1L));
+        stats.put("weights", List.of(1, 0.5, 1.0 / 3));
+        stats.put("empty", List.of());
         long cost = Objective.solutionCost(inst, ok);
         return List.of(
                 SolveResult.build(inst, "feasible", ok, 1e-7, stats,

@@ -37,6 +37,8 @@ import tools.jackson.databind.node.ObjectNode;
  *   <li>整数の欄は JSON の整数だけ。cost・iteration・stats は long、それ以外は int に収まること
  *   <li>小数の欄は整数も受け付ける。有限でなければエラー (1e400 は読むと無限大になる)
  *   <li>null を許すのは num_vehicles・history の iteration・stats の値だけ
+ *   <li>stats の値は null・真偽値・整数・小数・文字列、または数の配列 (1 段だけ。要素に null・真偽値・
+ *       文字列・配列・オブジェクトは置けない)。整数だけの配列は long の List、小数を含む配列は double の List
  * </ul>
  *
  * <p>書くときも非有限値は例外にする。null に置き換えると読み戻したときに元に戻らない。
@@ -323,6 +325,16 @@ public final class VrpJson {
                 case Long v -> st.put(e.getKey(), v);
                 case Double v -> st.put(e.getKey(), finite(v, at));
                 case String s -> st.put(e.getKey(), s);
+                case List<?> list -> {
+                    ArrayNode a = st.putArray(e.getKey());
+                    for (int i = 0; i < list.size(); i++) {
+                        switch (list.get(i)) {
+                            case Long v -> a.add(v);
+                            case Double v -> a.add(finite(v, at + "[" + i + "]"));
+                            default -> throw new IllegalArgumentException(at + "[" + i + "]: 書けない型");
+                        }
+                    }
+                }
                 // SolveResult が型を絞っているので来ないはず
                 default -> throw new IllegalArgumentException(at + ": 書けない型 " + e.getValue().getClass());
             }
@@ -444,6 +456,26 @@ public final class VrpJson {
         if (v.isString()) {
             return v.stringValue();
         }
-        throw new IllegalArgumentException(where + ": stats の値は null・真偽値・数・文字列のどれか: " + v);
+        if (v.isArray()) {
+            boolean anyDouble = false;
+            for (int i = 0; i < v.size(); i++) {
+                JsonNode e = v.get(i);
+                if (!e.isNumber()) {
+                    throw new IllegalArgumentException(where + "[" + i + "]: stats の配列の要素は数だけ: " + e);
+                }
+                anyDouble |= !e.isIntegralNumber();
+            }
+            List<Object> out = new ArrayList<>();
+            for (int i = 0; i < v.size(); i++) {
+                // 三項演算子にすると long が double に昇格するので、if で分ける
+                if (anyDouble) {
+                    out.add(dbl(v.get(i), where + "[" + i + "]"));
+                } else {
+                    out.add(int64(v.get(i), where + "[" + i + "]"));
+                }
+            }
+            return List.copyOf(out);
+        }
+        throw new IllegalArgumentException(where + ": stats の値は null・真偽値・数・文字列・数の配列のどれか: " + v);
     }
 }

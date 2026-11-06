@@ -21,7 +21,8 @@ JSON の規格外で他言語のパーサが読めない。null に置き換え�
     64 bit、それ以外 (需要・容量・台数・顧客番号) は 32 bit に収まること (Java の long と int)
   - 小数の欄は整数も受け付ける (座標 [50, 50] など)
   - null を許すのは num_vehicles・history の iteration・stats の値だけ
-  - stats の値は null・真偽値・整数・小数・文字列のどれか (入れ子にしない)
+  - stats の値は null・真偽値・整数・小数・文字列、または数の配列 (1 段だけ。要素に null・
+    真偽値・文字列・配列・オブジェクトは置けない。ALNS の重みの推移などに使う)
 """
 
 from __future__ import annotations
@@ -184,7 +185,15 @@ def _stat(v: object, where: str) -> object:
         return _int(v, where, 64)
     if isinstance(v, float):
         return _float(v, where)
-    raise ValueError(f"{where}: stats の値は null・真偽値・数・文字列のどれか: {v!r}")
+    if isinstance(v, list):
+        out = []
+        for i, e in enumerate(v):
+            at = f"{where}[{i}]"
+            if isinstance(e, bool) or not isinstance(e, (int, float)):
+                raise ValueError(f"{at}: stats の配列の要素は数だけ: {e!r}")
+            out.append(_int(e, at, 64) if isinstance(e, int) else _float(e, at))
+        return out
+    raise ValueError(f"{where}: stats の値は null・真偽値・数・文字列・数の配列のどれか: {v!r}")
 
 
 # ---------------------------------------------------------------- ファイル

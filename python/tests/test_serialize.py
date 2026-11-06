@@ -78,6 +78,20 @@ def test_non_finite_values_are_refused_not_rewritten(tmp_path, bad):
     assert not path.exists()
 
 
+@pytest.mark.parametrize("bad", [[1.0, math.inf], [1, True], [[1]], [None], ["1"], {"a": 1}])
+def test_stats_arrays_hold_only_finite_numbers(bad):
+    """stats に置ける配列は、有限の数だけを並べた 1 段の配列 (ALNS の重みの推移など)。"""
+    res = SolveResult.build(TOY5, "dummy", [[1, 2, 5], [3, 4]], elapsed_sec=0.0, stats={"w": bad})
+    with pytest.raises(ValueError, match=r"stats\.w"):
+        result_to_dict(res)
+
+
+def test_stats_arrays_round_trip():
+    res = SolveResult.build(TOY5, "dummy", [[1, 2, 5], [3, 4]], elapsed_sec=0.0,
+                            stats={"w": [1.0, 0.5], "n": [3, 0], "e": []})
+    assert result_from_dict(loads(json.dumps(result_to_dict(res)))) == res
+
+
 @pytest.mark.parametrize("token", ["Infinity", "-Infinity", "NaN"])
 def test_non_standard_constants_are_refused_when_reading(tmp_path, token):
     """json.loads は既定でこれらを読んでしまう。他の実装が書いたファイルも厳格に読む。"""

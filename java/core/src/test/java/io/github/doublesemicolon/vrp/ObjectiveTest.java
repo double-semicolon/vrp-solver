@@ -118,10 +118,30 @@ class ObjectiveTest {
         assertEquals(3L, r.stats().get("nodes"), "Integer は Long に揃える");
     }
 
+    static SolveResult withStat(Object v) {
+        Map<String, Object> stats = new java.util.HashMap<>();
+        stats.put("x", v);
+        return SolveResult.build(INST, "dummy", Solution.of(new int[] {1, 3}, new int[] {2}), 0.0, stats, List.of());
+    }
+
     @Test
     void statsRejectValuesThatJsonCannotRoundTrip() {
-        assertThrows(IllegalArgumentException.class,
-                () -> SolveResult.build(INST, "dummy", Solution.of(new int[] {1, 3}, new int[] {2}), 0.0,
-                        Map.of("nested", List.of(1)), List.of()));
+        for (Object bad : new Object[] {List.of(List.of(1)), List.of(1, "2"), List.of(true), Map.of("a", 1),
+                new int[] {1}, 1.5f}) {
+            assertThrows(IllegalArgumentException.class, () -> withStat(bad), String.valueOf(bad));
+        }
+        assertThrows(IllegalArgumentException.class, () -> withStat(java.util.Arrays.asList(1L, null)));
+    }
+
+    @Test
+    void numberListsAreNormalizedToWhatJsonReadsBack() {
+        // 整数だけなら Long の List。小数が 1 つでもあれば全て Double (JSON に書くと [1.0, 0.5] になるため)
+        assertEquals(List.of(1L, 2L), withStat(List.of(1, 2L)).stats().get("x"));
+        assertEquals(List.of(1.0, 0.5), withStat(List.of(1, 0.5)).stats().get("x"));
+        assertEquals(List.of(), withStat(List.of()).stats().get("x"));
+        java.util.List<Object> source = new java.util.ArrayList<>(List.of(1L));
+        SolveResult r = withStat(source);
+        source.add(2L);
+        assertEquals(List.of(1L), r.stats().get("x"), "渡した List を後から変えても影響しない");
     }
 }

@@ -164,8 +164,11 @@ def test_java_written_run_is_readable_by_python():
 
     ok = results[0]
     assert ok.elapsed_sec == 1e-7
-    assert ok.stats == {"nodes": 12, "ratio": 0.1, "seeded": True, "bound": None, "note": "日本語"}
+    assert ok.stats == {"nodes": 12, "ratio": 0.1, "seeded": True, "bound": None, "note": "日本語",
+                        "counts": [3, 0, -1], "weights": [1.0, 0.5, 1 / 3], "empty": []}
     assert type(ok.stats["nodes"]) is int and type(ok.stats["ratio"]) is float
+    assert [type(x) for x in ok.stats["counts"]] == [int] * 3
+    assert [type(x) for x in ok.stats["weights"]] == [float] * 3
     assert [(h.elapsed_sec, h.cost, h.iteration) for h in ok.history] == [
         (0.0, 40, 0), (2.5e-05, ok.cost, None)]
 

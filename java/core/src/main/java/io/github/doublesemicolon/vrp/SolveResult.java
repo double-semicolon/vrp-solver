@@ -9,9 +9,11 @@ import java.util.Objects;
 /**
  * ソルバの返り値の契約 (Python 版の result.SolveResult)。
  *
- * <p>stats はソルバ固有の数値 (探索ノード数など)。値は null・Boolean・Long・Double・String の
- * どれかに限る。JSON にそのまま書けて、読み戻すと同じ型に戻るものだけを許す。
- * Integer は Long に揃える (同じ値が型の違いで equals にならないのを防ぐ)。
+ * <p>stats はソルバ固有の数値 (探索ノード数など)。値は null・Boolean・Long・Double・String、
+ * または数の List (1 段。ALNS の重みの推移など) に限る。JSON にそのまま書けて、読み戻すと同じ型に
+ * 戻るものだけを許す。Integer は Long に揃える (同じ値が型の違いで equals にならないのを防ぐ)。
+ * List は、要素が全て整数なら List&lt;Long&gt;、小数が 1 つでもあれば List&lt;Double&gt; に揃える
+ * (JSON に書いた [1.0, 0.5] は読み戻すと小数の配列になるので、書く前から揃えておく)。
  */
 public record SolveResult(
         String instance,
@@ -60,7 +62,27 @@ public record SolveResult(
         if (v instanceof Integer i) {
             return i.longValue();
         }
+        if (v instanceof List<?> list) {
+            return normalizeList(key, list);
+        }
         throw new IllegalArgumentException(
-                "stats." + key + " の値は null・Boolean・Long・Double・String のどれか: " + v.getClass().getName());
+                "stats." + key + " の値は null・Boolean・Long・Double・String・数の List のどれか: " + v.getClass().getName());
+    }
+
+    private static List<?> normalizeList(String key, List<?> list) {
+        boolean anyDouble = false;
+        for (int i = 0; i < list.size(); i++) {
+            Object e = list.get(i);
+            if (e instanceof Double) {
+                anyDouble = true;
+            } else if (!(e instanceof Long || e instanceof Integer)) {
+                throw new IllegalArgumentException("stats." + key + "[" + i + "] は数 (Long・Integer・Double) のどれか: "
+                        + (e == null ? "null" : e.getClass().getName()));
+            }
+        }
+        if (anyDouble) {
+            return list.stream().map(e -> ((Number) e).doubleValue()).toList();
+        }
+        return list.stream().map(e -> ((Number) e).longValue()).toList();
     }
 }
