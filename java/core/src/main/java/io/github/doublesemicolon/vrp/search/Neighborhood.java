@@ -1,6 +1,7 @@
 package io.github.doublesemicolon.vrp.search;
 
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 
 /**
  * 近傍。今の解から 1 手で作れる解の集合を、手 ({@link Move}) として列挙する。
@@ -12,10 +13,19 @@ import java.util.function.Consumer;
  *   <li>手の delta は、適用前後のコストを計算し直した差と一致する
  * </ul>
  * 実行可能でない解 (容量超過、車両数超過) を渡したときの振る舞いは決めない。
+ *
+ * <p>手にはそれぞれ起点の顧客 ({@link Move#origin}) がある。don't-look bits は、起点を見るかどうかを
+ * look で渡して、見ない顧客を起点とする手を作らせない (走査そのものを省くので速くなる)。
  */
 public interface Neighborhood {
     /** 近傍の名前 (結果の stats や表示に使う)。 */
     String name();
 
-    void scan(Routes s, Consumer<Move> out);
+    /** 全ての手を渡す。 */
+    default void scan(Routes s, Consumer<Move> out) {
+        scan(s, c -> true, out);
+    }
+
+    /** 起点の顧客 c について look.test(c) が真の手だけを渡す (それ以外の約束は 2 引数版と同じ)。 */
+    void scan(Routes s, IntPredicate look, Consumer<Move> out);
 }

@@ -2,6 +2,7 @@ package io.github.doublesemicolon.vrp.search;
 
 import io.github.doublesemicolon.vrp.Instance;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 
 /**
  * 2-opt*: 2 本のルートをそれぞれ 1 か所で切り、後半同士を入れ替える。
@@ -35,6 +36,12 @@ public final class TwoOptStar implements Neighborhood {
      * r2 == s.count() は空の新しいルートで、ルート r1 を前半 i 人と残りの 2 本に分ける。
      */
     record TwoOptStarMove(int r1, int i, int r2, int j, long delta) implements Move {
+        /** ルート r1 の切れ目の直前の顧客 (切れ目が先頭なら先頭の顧客)。 */
+        @Override
+        public int origin(Routes s) {
+            return originOf(s, r1, i);
+        }
+
         @Override
         public void apply(Routes s) {
             int[] a = s.nodesCopy(r1);
@@ -74,8 +81,13 @@ public final class TwoOptStar implements Neighborhood {
         }
     }
 
+    /** 切れ目 i の起点の顧客。 */
+    static int originOf(Routes s, int r1, int i) {
+        return s.node(r1, Math.max(i - 1, 0));
+    }
+
     @Override
-    public void scan(Routes s, Consumer<Move> out) {
+    public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
         Instance inst = s.instance();
         int q = inst.capacity();
         for (int r1 = 0; r1 < s.count(); r1++) {
@@ -85,6 +97,10 @@ public final class TwoOptStar implements Neighborhood {
             for (int i = 0; i <= len1; i++) {
                 if (i > 0) {
                     pre1 += inst.demand(s.node(r1, i - 1));
+                }
+                // 前半の積載は見ない切れ目でも足しておく
+                if (!look.test(originOf(s, r1, i))) {
+                    continue;
                 }
                 int a1 = i == 0 ? 0 : s.node(r1, i - 1);
                 int b1 = i == len1 ? 0 : s.node(r1, i);

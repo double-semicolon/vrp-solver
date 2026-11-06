@@ -17,6 +17,9 @@ import java.util.List;
  * <p>ルートごとの積載量とコスト、全体のコストも持つ。どれも差し替えたルートから計算し直す値で、
  * 手の delta を積み上げた値ではない (差分計算のバグがここに紛れ込まないように)。
  * 空のルートは持たない。ルート数がそのまま使う車両数になる。
+ *
+ * <p>顧客ごとに、いまどのルートの何番目にいるかも持つ (近傍リストで絞った近傍が、
+ * 近くの顧客の位置を引くのに使う)。これもルートを差し替えるたびに数え直す。
  */
 public final class Routes {
     private final Instance inst;
@@ -24,18 +27,24 @@ public final class Routes {
     private final List<Long> loads;
     private final List<Long> costs;
     private long cost;
+    private final int[] routeOf;
+    private final int[] posOf;
 
-    private Routes(Instance inst, List<int[]> nodes, List<Long> loads, List<Long> costs, long cost) {
+    private Routes(Instance inst, List<int[]> nodes, List<Long> loads, List<Long> costs, long cost,
+                   int[] routeOf, int[] posOf) {
         this.inst = inst;
         this.nodes = nodes;
         this.loads = loads;
         this.costs = costs;
         this.cost = cost;
+        this.routeOf = routeOf;
+        this.posOf = posOf;
     }
 
     /** 空のルートは落とす。顧客番号の範囲や重複は検査しない (実行可能性は呼び出し側の前提)。 */
     public static Routes of(Instance inst, Solution sol) {
-        Routes s = new Routes(inst, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0);
+        Routes s = new Routes(inst, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0,
+                new int[inst.n() + 1], new int[inst.n() + 1]);
         for (List<Integer> r : sol.routes()) {
             if (!r.isEmpty()) {
                 s.add(r.stream().mapToInt(Integer::intValue).toArray());
@@ -45,7 +54,8 @@ public final class Routes {
     }
 
     public Routes copy() {
-        return new Routes(inst, new ArrayList<>(nodes), new ArrayList<>(loads), new ArrayList<>(costs), cost);
+        return new Routes(inst, new ArrayList<>(nodes), new ArrayList<>(loads), new ArrayList<>(costs), cost,
+                routeOf.clone(), posOf.clone());
     }
 
     public Solution toSolution() {
@@ -79,6 +89,16 @@ public final class Routes {
         return i == a.length - 1 ? 0 : a[i + 1];
     }
 
+    /** 顧客 c がいるルートの番号。 */
+    public int routeOf(int c) {
+        return routeOf[c];
+    }
+
+    /** 顧客 c がルートの何番目にいるか。 */
+    public int posOf(int c) {
+        return posOf[c];
+    }
+
     public long load(int r) {
         return loads.get(r);
     }
@@ -107,6 +127,7 @@ public final class Routes {
         nodes.set(r, route);
         loads.set(r, routeLoad(route));
         costs.set(r, routeCost(route));
+        index(r);
     }
 
     void add(int[] route) {
@@ -118,6 +139,7 @@ public final class Routes {
         loads.add(routeLoad(route));
         costs.add(c);
         cost += c;
+        index(nodes.size() - 1);
     }
 
     void remove(int r) {
@@ -125,6 +147,18 @@ public final class Routes {
         nodes.remove(r);
         loads.remove(r);
         costs.remove(r);
+        // 後ろのルートの番号が 1 つずつ詰まる
+        for (int k = r; k < nodes.size(); k++) {
+            index(k);
+        }
+    }
+
+    private void index(int r) {
+        int[] route = nodes.get(r);
+        for (int i = 0; i < route.length; i++) {
+            routeOf[route[i]] = r;
+            posOf[route[i]] = i;
+        }
     }
 
     private long routeCost(int[] route) {

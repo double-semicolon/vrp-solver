@@ -2,6 +2,7 @@ package io.github.doublesemicolon.vrp.search;
 
 import io.github.doublesemicolon.vrp.Instance;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 
 /**
  * ルート内の 2-opt を近傍の形にしたもの。中身は Step 1 の {@link io.github.doublesemicolon.vrp.solvers.TwoOpt}
@@ -24,6 +25,12 @@ public final class IntraTwoOpt implements Neighborhood {
 
     /** ルート r の i..j 番目を逆順にする (i < j)。 */
     record IntraTwoOptMove(int r, int i, int j, long delta) implements Move {
+        /** 逆順にする区間の先頭の顧客。 */
+        @Override
+        public int origin(Routes s) {
+            return s.node(r, i);
+        }
+
         @Override
         public void apply(Routes s) {
             int[] a = s.nodesCopy(r);
@@ -37,13 +44,16 @@ public final class IntraTwoOpt implements Neighborhood {
     }
 
     @Override
-    public void scan(Routes s, Consumer<Move> out) {
+    public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
         Instance inst = s.instance();
         for (int r = 0; r < s.count(); r++) {
             int len = s.size(r);
             for (int i = 0; i < len - 1; i++) {
                 int a = s.prev(r, i);
                 int b = s.node(r, i);
+                if (!look.test(b)) {
+                    continue;
+                }
                 long ab = inst.dist(a, b);
                 for (int j = i + 1; j < len; j++) {
                     int c = s.node(r, j);

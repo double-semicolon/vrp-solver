@@ -42,6 +42,9 @@ final class NeighborhoodContract {
             assertEquals(Objective.solutionCost(inst, after) - before, m.delta(), what + ": delta が計算し直しと違う");
             assertEquals(Objective.solutionCost(inst, after), t.cost(), what + ": Routes の持つコストが違う");
             assertTrue(after.routes().stream().noneMatch(List::isEmpty), what + ": 空のルートが残った");
+            assertIndexed(t, what);
+            int o = m.origin(s);
+            assertTrue(1 <= o && o <= inst.n() && s.node(s.routeOf(o), s.posOf(o)) == o, what + ": 起点 " + o);
             String c = canonical(after);
             assertNotEquals(original, c, what + ": 解が変わらない手");
             emitted.add(c);
@@ -58,6 +61,17 @@ final class NeighborhoodContract {
         expected.sort(null);
         emitted.sort(null);
         assertEquals(expected, emitted, nb.name() + " が出す手の集合が、素朴に作った集合と違う: " + start);
+    }
+
+    /** Routes の持つ「顧客がどのルートの何番目にいるか」が、ルートの中身と合っている。 */
+    static void assertIndexed(Routes s, String what) {
+        for (int r = 0; r < s.count(); r++) {
+            for (int i = 0; i < s.size(r); i++) {
+                int c = s.node(r, i);
+                assertEquals(r, s.routeOf(c), what + ": 顧客 " + c + " のルート番号");
+                assertEquals(i, s.posOf(c), what + ": 顧客 " + c + " の位置");
+            }
+        }
     }
 
     /** 局所最適: 1 手で作れるどの実行可能な解も、コストが下がらない。 */

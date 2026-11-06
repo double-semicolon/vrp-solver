@@ -14,7 +14,12 @@ import io.github.doublesemicolon.vrp.solvers.NearestNeighbor;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.IntPredicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,6 +41,36 @@ abstract class NeighborhoodTestBase {
             return VrpJson.readRun(TestData.runs().resolve("python/" + name + ".json")).instance();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * 近傍リストで絞った近傍を、インスタンスを知らずに作れる形にする (近傍リストはインスタンスごとに作る)。
+     * テストの近傍は 1 つのインスタンスを繰り返し使うので、インスタンスごとに覚えておく。
+     */
+    static final class WithNear implements Neighborhood {
+        final int k;
+        final Function<NeighborList, Neighborhood> make;
+        final Map<Instance, Neighborhood> made = new IdentityHashMap<>();
+        final Map<Instance, NeighborList> lists = new IdentityHashMap<>();
+
+        WithNear(int k, Function<NeighborList, Neighborhood> make) {
+            this.k = k;
+            this.make = make;
+        }
+
+        NeighborList list(Instance inst) {
+            return lists.computeIfAbsent(inst, i -> NeighborList.of(i, k));
+        }
+
+        @Override
+        public String name() {
+            return make.apply(null).name() + " (k=" + k + ")";
+        }
+
+        @Override
+        public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
+            made.computeIfAbsent(s.instance(), i -> make.apply(list(i))).scan(s, look, out);
         }
     }
 
@@ -68,6 +103,28 @@ abstract class NeighborhoodTestBase {
     void contractHoldsOnA200CustomerInstance() {
         Instance inst = stored("rand200-clustered-s1");
         NeighborhoodContract.check(inst, NearestNeighbor.build(inst), neighborhood(), this::naive);
+    }
+
+    @ParameterizedTest
+    @MethodSource("randomInstances")
+    void lookOnlyDropsTheMovesOfUnlookedOrigins(String name) {
+        // don't-look bits 用の look は、見ない顧客を起点とする手を落とすだけで、ほかの手は順番も変えない
+        Instance inst = stored(name);
+        Routes s = Routes.of(inst, NearestNeighbor.build(inst));
+        List<String> all = new ArrayList<>();
+        neighborhood().scan(s, m -> {
+            if (m.origin(s) % 3 != 0) {
+                all.add(m.toString());
+            }
+        });
+        List<String> looked = new ArrayList<>();
+        neighborhood().scan(s, c -> c % 3 != 0, m -> looked.add(m.toString()));
+        assertEquals(all, looked);
+        assertTrue(!all.isEmpty());
+
+        List<Move> none = new ArrayList<>();
+        neighborhood().scan(s, c -> false, none::add);
+        assertEquals(List.of(), none);
     }
 
     @ParameterizedTest

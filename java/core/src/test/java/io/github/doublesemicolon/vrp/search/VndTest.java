@@ -15,11 +15,14 @@ import io.github.doublesemicolon.vrp.solvers.TwoOpt;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class VndTest {
@@ -67,16 +70,24 @@ class VndTest {
 
     // ---------------------------------------------------------------- 完了条件 2: 最適値以上、最近傍法 + 2-opt 以下
 
-    static Stream<Cases.Case> feasibleCases() {
-        return Cases.feasible().stream();
+    /** 速くする仕組みの組み合わせ。顧客 5〜8 件でも絞られるよう、近傍リストは 3 人。 */
+    static final List<Vnd.Config> CONFIGS = List.of(
+            Vnd.Config.FULL,
+            new Vnd.Config(OptionalInt.of(3), false),
+            new Vnd.Config(OptionalInt.empty(), true),
+            new Vnd.Config(OptionalInt.of(3), true));
+
+    static Stream<Arguments> feasibleCases() {
+        return Cases.feasible().stream().flatMap(c -> CONFIGS.stream().map(conf -> Arguments.of(c, conf)));
     }
 
     @ParameterizedTest
     @MethodSource("feasibleCases")
-    void smallCasesLieBetweenTheOptimumAndNnTwoOpt(Cases.Case c) {
+    void smallCasesLieBetweenTheOptimumAndNnTwoOpt(Cases.Case c, Vnd.Config config) {
         Instance inst = c.instance();
         SolveResult twoOpt = TwoOpt.solve(inst);
-        SolveResult vnd = Vnd.solve(inst);
+        SolveResult vnd = Vnd.solve(inst, config, "nn+vnd");
+        // don't-look bits を使うときは保証ではない (speedupsOnlyImproveAndStayFeasible を参照)
         assertTrue(vnd.cost() <= twoOpt.cost(), c.name() + ": 最近傍法 + 2-opt より悪い");
         // 最近傍法が車両数の上限を超えるケース (nn-over) では、どちらも実行不可能になりうる。
         // 近傍は車両数に余裕があるときしかルートを増やさないので、実行可能な解から始めれば実行可能なまま
@@ -97,6 +108,30 @@ class VndTest {
         assertTrue(vnd.feasible());
         // 顧客 30〜50 件なら、ルート間の近傍で必ず改善できる (Step 1 の残りはルート割り当ての悪さ)
         assertTrue(vnd.cost() < twoOpt.cost(), name + ": " + vnd.cost() + " vs " + twoOpt.cost());
+    }
+
+    static Stream<Arguments> speedupsOnRandomInstances() {
+        return randomInstances().flatMap(name -> Stream.of(
+                Arguments.of(name, new Vnd.Config(OptionalInt.of(5), false)),
+                Arguments.of(name, new Vnd.Config(OptionalInt.empty(), true)),
+                Arguments.of(name, new Vnd.Config(OptionalInt.of(5), true))));
+    }
+
+    @ParameterizedTest
+    @MethodSource("speedupsOnRandomInstances")
+    void speedupsOnlyImproveAndStayFeasible(String name, Vnd.Config config) {
+        // 速くする仕組みは調べる手を減らすので、局所最適までは保証しない。保証するのは
+        // 実行可能なまま改善だけを重ねること。最近傍法 + 2-opt より良くなることは保証ではない
+        // (don't-look bits を使うと、最初の 2-opt の段階でも見逃しがありうる) が、
+        // ルート間の近傍の効きを考えれば、これが崩れたら何かがおかしい
+        Instance inst = NeighborhoodTestBase.stored(name);
+        SolveResult r = Vnd.solve(inst, config, "x");
+        assertTrue(r.feasible());
+        assertEquals(Objective.solutionCost(inst, r.solution()), r.history().get(r.history().size() - 1).cost());
+        for (int t = 1; t < r.history().size(); t++) {
+            assertTrue(r.history().get(t).cost() < r.history().get(t - 1).cost());
+        }
+        assertTrue(r.cost() < TwoOpt.solve(inst).cost());
     }
 
     @Test
@@ -135,9 +170,9 @@ class VndTest {
         }
 
         @Override
-        public void scan(Routes s, Consumer<Move> out) {
+        public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
             boolean[] improving = {false};
-            inner.scan(s, m -> {
+            inner.scan(s, look, m -> {
                 improving[0] |= m.delta() < 0;
                 out.accept(m);
             });
@@ -168,6 +203,65 @@ class VndTest {
         // 最後は全ての近傍が改善できずに終わる
         assertEquals(List.of("0-", "1-", "2-", "3-", "4-"), log.subList(log.size() - 5, log.size()));
         assertTrue(applied[0] > 0 && applied[1] > 0, "2-opt と relocate は効く: " + log);
+    }
+
+    // ---------------------------------------------------------------- don't-look bits の規則
+
+    @Test
+    void dontLookBitsFollowTheirRules() {
+        // 走査のたびに外から観察し、規則どおりのビットを手元で組み立てて、VND が渡す look と突き合わせる。
+        // 規則: (1) 近傍 k の走査で、見た顧客のうち改善する手の起点にならなかった顧客は、近傍 k で立てる
+        //       (2) 手を適用して前後の顧客が変わった顧客は、全ての近傍で倒す
+        Instance inst = NeighborhoodTestBase.stored("rand50-uniform-s0");
+        int n = inst.n();
+        List<Neighborhood> inner = Vnd.neighborhoods(NeighborList.of(inst, 5));
+        boolean[][] bits = new boolean[inner.size()][n + 1];
+        int[][][] lastAdjacency = {null};
+        long[] counts = new long[3];   // 走査の数、倒した数、look が偽だった数
+        List<Neighborhood> observed = new ArrayList<>();
+        for (int k = 0; k < inner.size(); k++) {
+            final int kk = k;
+            observed.add(new Neighborhood() {
+                @Override
+                public String name() {
+                    return inner.get(kk).name();
+                }
+
+                @Override
+                public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
+                    int[][] adj = Vnd.adjacency(s);
+                    if (lastAdjacency[0] != null) {
+                        for (int c = 1; c <= n; c++) {
+                            if (adj[0][c] != lastAdjacency[0][0][c] || adj[1][c] != lastAdjacency[0][1][c]) {
+                                for (boolean[] b : bits) {
+                                    counts[1] += b[c] ? 1 : 0;
+                                    b[c] = false;
+                                }
+                            }
+                        }
+                    }
+                    lastAdjacency[0] = adj;
+                    for (int c = 1; c <= n; c++) {
+                        assertEquals(!bits[kk][c], look.test(c), name() + " の走査 " + counts[0] + " で顧客 " + c);
+                        counts[2] += look.test(c) ? 0 : 1;
+                    }
+                    boolean[] improving = new boolean[n + 1];
+                    inner.get(kk).scan(s, look, m -> {
+                        if (m.delta() < 0) {
+                            improving[m.origin(s)] = true;
+                        }
+                        out.accept(m);
+                    });
+                    for (int c = 1; c <= n; c++) {
+                        bits[kk][c] |= !improving[c];
+                    }
+                    counts[0]++;
+                }
+            });
+        }
+        Vnd.descendDontLook(Routes.of(inst, NearestNeighbor.build(inst)), observed, (k, cost) -> {});
+        // 規則がどちらも実際に働いた
+        assertTrue(counts[0] > 20 && counts[1] > 0 && counts[2] > 0, java.util.Arrays.toString(counts));
     }
 
     @Test

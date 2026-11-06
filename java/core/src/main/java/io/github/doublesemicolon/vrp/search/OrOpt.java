@@ -2,6 +2,7 @@ package io.github.doublesemicolon.vrp.search;
 
 import io.github.doublesemicolon.vrp.Instance;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 
 /**
  * Or-opt: 連続する 2〜3 人の区間を抜き、同じルートの別の位置か、別のルートか、新しいルートに入れる。
@@ -32,6 +33,12 @@ public final class OrOpt implements Neighborhood {
      */
     record OrOptMove(int from, int start, int length, int to, int toPos, boolean reversed, long delta)
             implements Move {
+        /** 区間の先頭の顧客。 */
+        @Override
+        public int origin(Routes s) {
+            return s.node(from, start);
+        }
+
         @Override
         public void apply(Routes s) {
             int[] src = s.nodesCopy(from);
@@ -70,7 +77,7 @@ public final class OrOpt implements Neighborhood {
     }
 
     @Override
-    public void scan(Routes s, Consumer<Move> out) {
+    public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
         Instance inst = s.instance();
         int q = inst.capacity();
         for (int from = 0; from < s.count(); from++) {
@@ -78,6 +85,9 @@ public final class OrOpt implements Neighborhood {
             for (int length = MIN_LENGTH; length <= MAX_LENGTH; length++) {
                 for (int start = 0; start + length <= len; start++) {
                     int f = s.node(from, start);
+                    if (!look.test(f)) {
+                        continue;
+                    }
                     int l = s.node(from, start + length - 1);
                     int a = s.prev(from, start);
                     int b = s.next(from, start + length - 1);

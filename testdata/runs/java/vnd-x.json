@@ -1,0 +1,959 @@
+{
+  "format": "vrp-bench/1",
+  "rows": [
+    {
+      "instance": "X-n101-k25",
+      "n": 100,
+      "bks": 27591,
+      "results": [
+        {
+          "instance": "X-n101-k25",
+          "solver": "nn+vnd",
+          "solution": [
+            [
+              35,
+              46,
+              24,
+              95,
+              32
+            ],
+            [
+              79,
+              30,
+              85,
+              50
+            ],
+            [
+              5,
+              12,
+              58
+            ],
+            [
+              100,
+              61,
+              23
+            ],
+            [
+              91,
+              89,
+              98,
+              71,
+              81,
+              11
+            ],
+            [
+              17,
+              94,
+              56
+            ],
+            [
+              8,
+              80
+            ],
+            [
+              31,
+              73,
+              53
+            ],
+            [
+              33,
+              93,
+              75
+            ],
+            [
+              39,
+              25,
+              40,
+              3,
+              64,
+              34
+            ],
+            [
+              20,
+              41,
+              22,
+              15
+            ],
+            [
+              18,
+              13,
+              74
+            ],
+            [
+              26,
+              60,
+              67,
+              88
+            ],
+            [
+              63,
+              14,
+              77,
+              44
+            ],
+            [
+              27,
+              97,
+              19
+            ],
+            [
+              59,
+              57,
+              72,
+              82,
+              78,
+              65
+            ],
+            [
+              10,
+              42,
+              28
+            ],
+            [
+              96,
+              48,
+              87,
+              37
+            ],
+            [
+              21,
+              52,
+              83
+            ],
+            [
+              66,
+              84,
+              90,
+              68
+            ],
+            [
+              1,
+              86,
+              54,
+              69
+            ],
+            [
+              51,
+              62,
+              99
+            ],
+            [
+              92,
+              9,
+              55
+            ],
+            [
+              6,
+              36,
+              49
+            ],
+            [
+              38,
+              47,
+              43,
+              29,
+              45,
+              2,
+              7,
+              4
+            ],
+            [
+              76,
+              16,
+              70
+            ]
+          ],
+          "cost": 29187,
+          "feasible": true,
+          "elapsed_sec": 0.0619973,
+          "stats": {
+            "routes": 26,
+            "moves": 67,
+            "moves_2-opt": 21,
+            "moves_relocate": 30,
+            "moves_swap": 16,
+            "moves_2-opt*": 0,
+            "moves_or-opt": 0
+          },
+          "history": [
+            {
+              "elapsed_sec": 0.005028,
+              "cost": 41944,
+              "iteration": 0
+            },
+            {
+              "elapsed_sec": 0.0096087,
+              "cost": 41780,
+              "iteration": 1
+            },
+            {
+              "elapsed_sec": 0.0097916,
+              "cost": 41495,
+              "iteration": 2
+            },
+            {
+              "elapsed_sec": 0.0100022,
+              "cost": 41420,
+              "iteration": 3
+            },
+            {
+              "elapsed_sec": 0.0101872,
+              "cost": 41347,
+              "iteration": 4
+            },
+            {
+              "elapsed_sec": 0.0103359,
+              "cost": 41290,
+              "iteration": 5
+            },
+            {
+              "elapsed_sec": 0.0104692,
+              "cost": 41256,
+              "iteration": 6
+            },
+            {
+              "elapsed_sec": 0.0105961,
+              "cost": 41223,
+              "iteration": 7
+            },
+            {
+              "elapsed_sec": 0.010718,
+              "cost": 41191,
+              "iteration": 8
+            },
+            {
+              "elapsed_sec": 0.0108188,
+              "cost": 41163,
+              "iteration": 9
+            },
+            {
+              "elapsed_sec": 0.0109195,
+              "cost": 41145,
+              "iteration": 10
+            },
+            {
+              "elapsed_sec": 0.0110212,
+              "cost": 41136,
+              "iteration": 11
+            },
+            {
+              "elapsed_sec": 0.0111106,
+              "cost": 41123,
+              "iteration": 12
+            },
+            {
+              "elapsed_sec": 0.0111994,
+              "cost": 41114,
+              "iteration": 13
+            },
+            {
+              "elapsed_sec": 0.0112961,
+              "cost": 41112,
+              "iteration": 14
+            },
+            {
+              "elapsed_sec": 0.0152418,
+              "cost": 39603,
+              "iteration": 15
+            },
+            {
+              "elapsed_sec": 0.0161763,
+              "cost": 38476,
+              "iteration": 16
+            },
+            {
+              "elapsed_sec": 0.017156,
+              "cost": 37452,
+              "iteration": 17
+            },
+            {
+              "elapsed_sec": 0.0179985,
+              "cost": 36570,
+              "iteration": 18
+            },
+            {
+              "elapsed_sec": 0.0188696,
+              "cost": 35781,
+              "iteration": 19
+            },
+            {
+              "elapsed_sec": 0.0197867,
+              "cost": 35042,
+              "iteration": 20
+            },
+            {
+              "elapsed_sec": 0.0207661,
+              "cost": 34476,
+              "iteration": 21
+            },
+            {
+              "elapsed_sec": 0.0211156,
+              "cost": 33923,
+              "iteration": 22
+            },
+            {
+              "elapsed_sec": 0.0214418,
+              "cost": 33455,
+              "iteration": 23
+            },
+            {
+              "elapsed_sec": 0.0217657,
+              "cost": 33061,
+              "iteration": 24
+            },
+            {
+              "elapsed_sec": 0.0220853,
+              "cost": 32691,
+              "iteration": 25
+            },
+            {
+              "elapsed_sec": 0.0224026,
+              "cost": 32532,
+              "iteration": 26
+            },
+            {
+              "elapsed_sec": 0.0224344,
+              "cost": 32517,
+              "iteration": 27
+            },
+            {
+              "elapsed_sec": 0.0230804,
+              "cost": 32402,
+              "iteration": 28
+            },
+            {
+              "elapsed_sec": 0.0239273,
+              "cost": 32293,
+              "iteration": 29
+            },
+            {
+              "elapsed_sec": 0.0248165,
+              "cost": 32201,
+              "iteration": 30
+            },
+            {
+              "elapsed_sec": 0.0254724,
+              "cost": 32119,
+              "iteration": 31
+            },
+            {
+              "elapsed_sec": 0.0264979,
+              "cost": 31837,
+              "iteration": 32
+            },
+            {
+              "elapsed_sec": 0.0274465,
+              "cost": 31513,
+              "iteration": 33
+            },
+            {
+              "elapsed_sec": 0.0281862,
+              "cost": 31473,
+              "iteration": 34
+            },
+            {
+              "elapsed_sec": 0.028451,
+              "cost": 31412,
+              "iteration": 35
+            },
+            {
+              "elapsed_sec": 0.0287449,
+              "cost": 31388,
+              "iteration": 36
+            },
+            {
+              "elapsed_sec": 0.0290375,
+              "cost": 31377,
+              "iteration": 37
+            },
+            {
+              "elapsed_sec": 0.0356438,
+              "cost": 31141,
+              "iteration": 38
+            },
+            {
+              "elapsed_sec": 0.0360756,
+              "cost": 31138,
+              "iteration": 39
+            },
+            {
+              "elapsed_sec": 0.0380869,
+              "cost": 30973,
+              "iteration": 40
+            },
+            {
+              "elapsed_sec": 0.0381578,
+              "cost": 30961,
+              "iteration": 41
+            },
+            {
+              "elapsed_sec": 0.039647,
+              "cost": 30866,
+              "iteration": 42
+            },
+            {
+              "elapsed_sec": 0.0405214,
+              "cost": 30722,
+              "iteration": 43
+            },
+            {
+              "elapsed_sec": 0.0405586,
+              "cost": 30659,
+              "iteration": 44
+            },
+            {
+              "elapsed_sec": 0.0416416,
+              "cost": 30604,
+              "iteration": 45
+            },
+            {
+              "elapsed_sec": 0.0417274,
+              "cost": 30600,
+              "iteration": 46
+            },
+            {
+              "elapsed_sec": 0.0437516,
+              "cost": 30549,
+              "iteration": 47
+            },
+            {
+              "elapsed_sec": 0.0456251,
+              "cost": 30481,
+              "iteration": 48
+            },
+            {
+              "elapsed_sec": 0.0456969,
+              "cost": 30464,
+              "iteration": 49
+            },
+            {
+              "elapsed_sec": 0.0458942,
+              "cost": 29767,
+              "iteration": 50
+            },
+            {
+              "elapsed_sec": 0.0460637,
+              "cost": 29717,
+              "iteration": 51
+            },
+            {
+              "elapsed_sec": 0.0477524,
+              "cost": 29668,
+              "iteration": 52
+            },
+            {
+              "elapsed_sec": 0.0494788,
+              "cost": 29646,
+              "iteration": 53
+            },
+            {
+              "elapsed_sec": 0.04957,
+              "cost": 29591,
+              "iteration": 54
+            },
+            {
+              "elapsed_sec": 0.0514823,
+              "cost": 29582,
+              "iteration": 55
+            },
+            {
+              "elapsed_sec": 0.0516719,
+              "cost": 29573,
+              "iteration": 56
+            },
+            {
+              "elapsed_sec": 0.0518354,
+              "cost": 29570,
+              "iteration": 57
+            },
+            {
+              "elapsed_sec": 0.0536177,
+              "cost": 29507,
+              "iteration": 58
+            },
+            {
+              "elapsed_sec": 0.0547207,
+              "cost": 29417,
+              "iteration": 59
+            },
+            {
+              "elapsed_sec": 0.0554115,
+              "cost": 29372,
+              "iteration": 60
+            },
+            {
+              "elapsed_sec": 0.0560227,
+              "cost": 29345,
+              "iteration": 61
+            },
+            {
+              "elapsed_sec": 0.0561853,
+              "cost": 29341,
+              "iteration": 62
+            },
+            {
+              "elapsed_sec": 0.0563467,
+              "cost": 29328,
+              "iteration": 63
+            },
+            {
+              "elapsed_sec": 0.0565382,
+              "cost": 29280,
+              "iteration": 64
+            },
+            {
+              "elapsed_sec": 0.0571169,
+              "cost": 29197,
+              "iteration": 65
+            },
+            {
+              "elapsed_sec": 0.0571823,
+              "cost": 29188,
+              "iteration": 66
+            },
+            {
+              "elapsed_sec": 0.0579048,
+              "cost": 29187,
+              "iteration": 67
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "instance": "X-n106-k14",
+      "n": 105,
+      "bks": 26362,
+      "results": [
+        {
+          "instance": "X-n106-k14",
+          "solver": "nn+vnd",
+          "solution": [
+            [
+              22,
+              52,
+              33
+            ],
+            [
+              5,
+              45,
+              100,
+              44,
+              51,
+              15,
+              102,
+              26
+            ],
+            [
+              90,
+              24,
+              9,
+              12,
+              104,
+              1,
+              92
+            ],
+            [
+              62,
+              7,
+              75,
+              84,
+              66,
+              93,
+              101
+            ],
+            [
+              60,
+              76,
+              87,
+              43,
+              28,
+              103,
+              53
+            ],
+            [
+              25,
+              56,
+              19,
+              37,
+              79,
+              71,
+              49,
+              97
+            ],
+            [
+              96,
+              82,
+              29,
+              72,
+              34,
+              11,
+              74
+            ],
+            [
+              27,
+              14,
+              58,
+              48,
+              2,
+              83,
+              77,
+              67
+            ],
+            [
+              57,
+              63,
+              31,
+              105,
+              69,
+              17,
+              40,
+              13,
+              85
+            ],
+            [
+              99,
+              21,
+              54,
+              8,
+              36,
+              88,
+              86,
+              18
+            ],
+            [
+              94,
+              64,
+              91,
+              41,
+              32,
+              73,
+              16,
+              20
+            ],
+            [
+              68,
+              95,
+              59,
+              89,
+              30,
+              42,
+              3,
+              35,
+              78
+            ],
+            [
+              61,
+              80,
+              65,
+              4,
+              98,
+              23,
+              55,
+              10,
+              46
+            ],
+            [
+              38,
+              70,
+              6,
+              81,
+              50,
+              39,
+              47
+            ]
+          ],
+          "cost": 27261,
+          "feasible": true,
+          "elapsed_sec": 0.0132359,
+          "stats": {
+            "routes": 14,
+            "moves": 54,
+            "moves_2-opt": 28,
+            "moves_relocate": 25,
+            "moves_swap": 0,
+            "moves_2-opt*": 1,
+            "moves_or-opt": 0
+          },
+          "history": [
+            {
+              "elapsed_sec": 0.0013285,
+              "cost": 28896,
+              "iteration": 0
+            },
+            {
+              "elapsed_sec": 0.0014597,
+              "cost": 28819,
+              "iteration": 1
+            },
+            {
+              "elapsed_sec": 0.0015705,
+              "cost": 28771,
+              "iteration": 2
+            },
+            {
+              "elapsed_sec": 0.0016744,
+              "cost": 28695,
+              "iteration": 3
+            },
+            {
+              "elapsed_sec": 0.0017797,
+              "cost": 28660,
+              "iteration": 4
+            },
+            {
+              "elapsed_sec": 0.0018842,
+              "cost": 28631,
+              "iteration": 5
+            },
+            {
+              "elapsed_sec": 0.0019879,
+              "cost": 28601,
+              "iteration": 6
+            },
+            {
+              "elapsed_sec": 0.0020909,
+              "cost": 28578,
+              "iteration": 7
+            },
+            {
+              "elapsed_sec": 0.0021951,
+              "cost": 28556,
+              "iteration": 8
+            },
+            {
+              "elapsed_sec": 0.002298,
+              "cost": 28536,
+              "iteration": 9
+            },
+            {
+              "elapsed_sec": 0.0024007,
+              "cost": 28516,
+              "iteration": 10
+            },
+            {
+              "elapsed_sec": 0.0025352,
+              "cost": 28498,
+              "iteration": 11
+            },
+            {
+              "elapsed_sec": 0.0026447,
+              "cost": 28484,
+              "iteration": 12
+            },
+            {
+              "elapsed_sec": 0.0027498,
+              "cost": 28471,
+              "iteration": 13
+            },
+            {
+              "elapsed_sec": 0.0028547,
+              "cost": 28460,
+              "iteration": 14
+            },
+            {
+              "elapsed_sec": 0.002963,
+              "cost": 28450,
+              "iteration": 15
+            },
+            {
+              "elapsed_sec": 0.00307,
+              "cost": 28413,
+              "iteration": 16
+            },
+            {
+              "elapsed_sec": 0.0031782,
+              "cost": 28404,
+              "iteration": 17
+            },
+            {
+              "elapsed_sec": 0.0032663,
+              "cost": 28398,
+              "iteration": 18
+            },
+            {
+              "elapsed_sec": 0.0033473,
+              "cost": 28392,
+              "iteration": 19
+            },
+            {
+              "elapsed_sec": 0.0034703,
+              "cost": 28387,
+              "iteration": 20
+            },
+            {
+              "elapsed_sec": 0.0035785,
+              "cost": 28383,
+              "iteration": 21
+            },
+            {
+              "elapsed_sec": 0.0036831,
+              "cost": 28373,
+              "iteration": 22
+            },
+            {
+              "elapsed_sec": 0.0038792,
+              "cost": 28273,
+              "iteration": 23
+            },
+            {
+              "elapsed_sec": 0.0040833,
+              "cost": 28196,
+              "iteration": 24
+            },
+            {
+              "elapsed_sec": 0.0044151,
+              "cost": 28130,
+              "iteration": 25
+            },
+            {
+              "elapsed_sec": 0.0046684,
+              "cost": 28067,
+              "iteration": 26
+            },
+            {
+              "elapsed_sec": 0.004903,
+              "cost": 28006,
+              "iteration": 27
+            },
+            {
+              "elapsed_sec": 0.0050051,
+              "cost": 27971,
+              "iteration": 28
+            },
+            {
+              "elapsed_sec": 0.0052376,
+              "cost": 27894,
+              "iteration": 29
+            },
+            {
+              "elapsed_sec": 0.0054599,
+              "cost": 27841,
+              "iteration": 30
+            },
+            {
+              "elapsed_sec": 0.0057209,
+              "cost": 27808,
+              "iteration": 31
+            },
+            {
+              "elapsed_sec": 0.0059435,
+              "cost": 27712,
+              "iteration": 32
+            },
+            {
+              "elapsed_sec": 0.0062937,
+              "cost": 27646,
+              "iteration": 33
+            },
+            {
+              "elapsed_sec": 0.0066205,
+              "cost": 27586,
+              "iteration": 34
+            },
+            {
+              "elapsed_sec": 0.0067105,
+              "cost": 27585,
+              "iteration": 35
+            },
+            {
+              "elapsed_sec": 0.0069646,
+              "cost": 27521,
+              "iteration": 36
+            },
+            {
+              "elapsed_sec": 0.0070724,
+              "cost": 27515,
+              "iteration": 37
+            },
+            {
+              "elapsed_sec": 0.0072906,
+              "cost": 27487,
+              "iteration": 38
+            },
+            {
+              "elapsed_sec": 0.0074703,
+              "cost": 27462,
+              "iteration": 39
+            },
+            {
+              "elapsed_sec": 0.0075856,
+              "cost": 27454,
+              "iteration": 40
+            },
+            {
+              "elapsed_sec": 0.0076957,
+              "cost": 27447,
+              "iteration": 41
+            },
+            {
+              "elapsed_sec": 0.0078058,
+              "cost": 27441,
+              "iteration": 42
+            },
+            {
+              "elapsed_sec": 0.0079166,
+              "cost": 27437,
+              "iteration": 43
+            },
+            {
+              "elapsed_sec": 0.0079346,
+              "cost": 27435,
+              "iteration": 44
+            },
+            {
+              "elapsed_sec": 0.0080749,
+              "cost": 27413,
+              "iteration": 45
+            },
+            {
+              "elapsed_sec": 0.0082124,
+              "cost": 27385,
+              "iteration": 46
+            },
+            {
+              "elapsed_sec": 0.0083452,
+              "cost": 27378,
+              "iteration": 47
+            },
+            {
+              "elapsed_sec": 0.0084514,
+              "cost": 27371,
+              "iteration": 48
+            },
+            {
+              "elapsed_sec": 0.0085621,
+              "cost": 27368,
+              "iteration": 49
+            },
+            {
+              "elapsed_sec": 0.0086709,
+              "cost": 27365,
+              "iteration": 50
+            },
+            {
+              "elapsed_sec": 0.008794,
+              "cost": 27305,
+              "iteration": 51
+            },
+            {
+              "elapsed_sec": 0.0110406,
+              "cost": 27293,
+              "iteration": 52
+            },
+            {
+              "elapsed_sec": 0.0110672,
+              "cost": 27270,
+              "iteration": 53
+            },
+            {
+              "elapsed_sec": 0.0110847,
+              "cost": 27261,
+              "iteration": 54
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

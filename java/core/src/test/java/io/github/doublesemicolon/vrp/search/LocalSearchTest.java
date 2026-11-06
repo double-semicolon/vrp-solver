@@ -9,6 +9,7 @@ import io.github.doublesemicolon.vrp.Solution;
 import io.github.doublesemicolon.vrp.json.Cases;
 import io.github.doublesemicolon.vrp.solvers.NearestNeighbor;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 import org.junit.jupiter.api.Test;
 
 class LocalSearchTest {
@@ -20,8 +21,8 @@ class LocalSearchTest {
         }
 
         @Override
-        public void scan(Routes s, Consumer<Move> out) {
-            new Relocate().scan(s, m -> {
+        public void scan(Routes s, IntPredicate look, Consumer<Move> out) {
+            new Relocate().scan(s, look, m -> {
                 Relocate.RelocateMove r = (Relocate.RelocateMove) m;
                 out.accept(new Relocate.RelocateMove(r.from(), r.fromPos(), r.to(), r.toPos(), r.delta() - 1));
             });

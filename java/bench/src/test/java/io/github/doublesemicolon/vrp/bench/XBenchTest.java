@@ -59,7 +59,7 @@ class XBenchTest {
 
     @Test
     void vndIsOfferedAndNeverWorseThanNnTwoOpt() throws IOException {
-        assertEquals(List.of("nn", "nn+2opt", "nn+vnd"), XBench.parseArgs(new String[0]).solvers());
+        assertEquals(List.of("nn", "nn+2opt", "nn+vnd", "nn+vnd-k20"), XBench.parseArgs(new String[0]).solvers());
         List<BenchRow> rows = XBench.run(XBench.loadCases(DATA, OptionalInt.empty()), List.of("nn+2opt", "nn+vnd"), r -> {});
         for (BenchRow row : rows) {
             SolveResult twoOpt = row.results().get(0);
@@ -158,6 +158,24 @@ class XBenchTest {
                 res.history().stream().map(Improvement::cost).toList().toString(),
                 res.history().stream().map(h -> h.iteration().toString()).toList().toString())))
                 .toList();
+    }
+
+    // #26 で VND に速くする仕組みを足す前のコード (#25 のコミット 8e81cad) で、cvrplib/ の 2 件に
+    // nn+vnd を掛けた結果。仕組みを使わない VND が、足す前と同じ解を出すことを確かめる。
+    // 近傍の定義を意図して変えない限り、作り直さない (VRP_REGENERATE の対象にもしない)
+    static final Path VND_BEFORE_SPEEDUPS = TestData.runs().resolve("java/vnd-x.json");
+
+    @Test
+    void vndWithoutSpeedupsGivesTheSameSolutionsAsBeforeTheyWereAdded() throws IOException {
+        List<BenchRow> now = XBench.run(XBench.loadCases(DATA, OptionalInt.empty()), List.of("nn+vnd"), r -> {});
+        assertEquals(withoutTime(VrpJson.readBench(VND_BEFORE_SPEEDUPS)), withoutTime(now));
+    }
+
+    @Test
+    void speedupCombinationsAreNamedAfterTheirSettings() {
+        assertTrue(XBench.SOLVERS.keySet().containsAll(List.of(
+                "nn+vnd-dlb", "nn+vnd-k5", "nn+vnd-k40", "nn+vnd-k10-dlb", "nn+vnd-k20-dlb")));
+        assertEquals(3 + 9, XBench.SOLVERS.size());
     }
 
     @Test

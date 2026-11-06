@@ -46,11 +46,30 @@ public final class XBench {
      */
     static final Map<String, Function<Instance, SolveResult>> SOLVERS = new LinkedHashMap<>();
 
+    /** 近傍リストの人数の候補 (#26 の測定)。 */
+    static final List<Integer> NEAR_KS = List.of(5, 10, 20, 40);
+
     static {
         SOLVERS.put("nn", NearestNeighbor::solve);
         SOLVERS.put("nn+2opt", TwoOpt::solve);
         SOLVERS.put("nn+vnd", Vnd::solve);
+        // VND を速くする仕組みの組み合わせ。-k{人数} は近傍リスト、-dlb は don't-look bits
+        for (boolean dontLook : new boolean[] {false, true}) {
+            List<OptionalInt> ks = new ArrayList<>(List.of(OptionalInt.empty()));
+            NEAR_KS.forEach(k -> ks.add(OptionalInt.of(k)));
+            for (OptionalInt k : ks) {
+                if (k.isEmpty() && !dontLook) {
+                    continue;   // nn+vnd そのもの
+                }
+                String name = "nn+vnd" + (k.isPresent() ? "-k" + k.getAsInt() : "") + (dontLook ? "-dlb" : "");
+                Vnd.Config config = new Vnd.Config(k, dontLook);
+                SOLVERS.put(name, inst -> Vnd.solve(inst, config, name));
+            }
+        }
     }
+
+    /** --solvers を付けないときに掛けるソルバ。 */
+    static final List<String> DEFAULT_SOLVERS = List.of("nn", "nn+2opt", "nn+vnd", "nn+vnd-k20");
 
     /** bks は .sol の記載ではなく、目的関数で採点し直したコスト。 */
     record Case(Instance inst, long bks) {}
@@ -123,7 +142,7 @@ public final class XBench {
     static Args parseArgs(String[] argv) {
         Path dir = Path.of(X_DIR);
         OptionalInt maxN = OptionalInt.empty();
-        List<String> solvers = List.copyOf(SOLVERS.keySet());
+        List<String> solvers = DEFAULT_SOLVERS;
         boolean save = false;
         Path outDir = Path.of("results");
         for (int i = 0; i < argv.length; i++) {
@@ -205,7 +224,8 @@ public final class XBench {
         });
 
         out.printf("集計 (%d インスタンス)%n", rows.size());
-        int[] sw = {12, 13, 13, 11, 11, 0};
+        int nameWidth = a.solvers().stream().mapToInt(String::length).max().orElse(0) + 2;
+        int[] sw = {Math.max(12, nameWidth), 13, 13, 11, 11, 0};
         out.println("  " + row(List.of("ソルバ", "gap 平均", "gap 最大", "時間 平均", "時間 合計", "実行不可能"), sw));
         for (int k = 0; k < a.solvers().size(); k++) {
             final int kk = k;
