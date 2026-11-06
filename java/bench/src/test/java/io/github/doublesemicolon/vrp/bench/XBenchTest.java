@@ -175,7 +175,7 @@ class XBenchTest {
     void speedupCombinationsAreNamedAfterTheirSettings() {
         assertTrue(XBench.SOLVERS.keySet().containsAll(List.of(
                 "nn+vnd-dlb", "nn+vnd-k5", "nn+vnd-k40", "nn+vnd-k10-dlb", "nn+vnd-k20-dlb")));
-        assertEquals(3 + 9, XBench.SOLVERS.size());
+        assertEquals(3 + 9 + 1, XBench.SOLVERS.size());
     }
 
     @Test

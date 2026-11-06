@@ -1,6 +1,7 @@
 package io.github.doublesemicolon.vrp.bench;
 
 import io.github.doublesemicolon.vrp.Instance;
+import io.github.doublesemicolon.vrp.alns.Alns;
 import io.github.doublesemicolon.vrp.Objective;
 import io.github.doublesemicolon.vrp.SolveResult;
 import io.github.doublesemicolon.vrp.cvrplib.Cvrplib;
@@ -66,6 +67,13 @@ public final class XBench {
                 SOLVERS.put(name, inst -> Vnd.solve(inst, config, name));
             }
         }
+    }
+
+    /** ALNS の反復回数 (#27 の仮の値。時間制限と複数シードは #29)。 */
+    static final int ALNS_ITERATIONS = 1000;
+
+    static {
+        SOLVERS.put("nn+alns", inst -> Alns.solve(inst, Alns.Config.of(inst, 0, ALNS_ITERATIONS)));
     }
 
     /** --solvers を付けないときに掛けるソルバ。 */

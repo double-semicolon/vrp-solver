@@ -43,8 +43,10 @@ public final class Routes {
 
     /** 空のルートは落とす。顧客番号の範囲や重複は検査しない (実行可能性は呼び出し側の前提)。 */
     public static Routes of(Instance inst, Solution sol) {
+        int[] routeOf = new int[inst.n() + 1];
+        Arrays.fill(routeOf, -1);
         Routes s = new Routes(inst, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0,
-                new int[inst.n() + 1], new int[inst.n() + 1]);
+                routeOf, new int[inst.n() + 1]);
         for (List<Integer> r : sol.routes()) {
             if (!r.isEmpty()) {
                 s.add(r.stream().mapToInt(Integer::intValue).toArray());
@@ -89,7 +91,7 @@ public final class Routes {
         return i == a.length - 1 ? 0 : a[i + 1];
     }
 
-    /** 顧客 c がいるルートの番号。 */
+    /** 顧客 c がいるルートの番号。どのルートにもいなければ -1。 */
     public int routeOf(int c) {
         return routeOf[c];
     }
@@ -110,6 +112,47 @@ public final class Routes {
     /** ルートを 1 本増やしても車両数の上限に収まるか。 */
     public boolean canAddRoute() {
         return inst.numVehicles().isEmpty() || count() < inst.numVehicles().getAsInt();
+    }
+
+    // ---------------------------------------------------------------- 顧客 1 人ずつの出し入れ (ALNS の破壊と修復)
+
+    /**
+     * 顧客 c をルートから抜く。ルートが空になったら消す。抜いた後の解は全顧客を訪問しない
+     * (ALNS の修復で入れ直す)。抜いた顧客の {@link #routeOf} は -1 になる。
+     */
+    public void removeCustomer(int c) {
+        int r = routeOf[c];
+        if (r < 0) {
+            throw new IllegalArgumentException("顧客 " + c + " はどのルートにもいない");
+        }
+        int p = posOf[c];
+        int[] src = nodes.get(r);
+        int[] out = new int[src.length - 1];
+        System.arraycopy(src, 0, out, 0, p);
+        System.arraycopy(src, p + 1, out, p, out.length - p);
+        if (out.length == 0) {
+            remove(r);
+        } else {
+            replace(r, out);
+        }
+        routeOf[c] = -1;
+    }
+
+    /** 顧客 c をルート r の pos 番目に入れる。r == count() なら新しいルートを作る。容量や車両数は確かめない。 */
+    public void insertCustomer(int c, int r, int pos) {
+        if (routeOf[c] >= 0) {
+            throw new IllegalArgumentException("顧客 " + c + " は既にルート " + routeOf[c] + " にいる");
+        }
+        if (r == count()) {
+            add(new int[] {c});
+            return;
+        }
+        int[] src = nodes.get(r);
+        int[] out = new int[src.length + 1];
+        System.arraycopy(src, 0, out, 0, pos);
+        out[pos] = c;
+        System.arraycopy(src, pos, out, pos + 1, src.length - pos);
+        replace(r, out);
     }
 
     // ---------------------------------------------------------------- 手の適用 (Move から呼ぶ)
